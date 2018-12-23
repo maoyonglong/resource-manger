@@ -1,0 +1,22 @@
+{
+  "name": "resources-manager",
+  "version": "1.0.0",
+  "description": "This is a tool for arranging the docs.",
+  "main": "./scripts/electron/index.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maoyonglong/resource-manger.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/maoyonglong/resource-manger/issues"
+  },
+  "homepage": "https://github.com/maoyonglong/resource-manger#readme",
+  "devDependencies": {
+    "electron": "^3.0.12"
+  }
+}

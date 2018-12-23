@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>资源管理器</title>
+    <link rel="stylesheet" href="../styles/base/minireset.min.css">
+    <link rel="stylesheet" href="../styles/base/base.css">
+    <link rel="stylesheet" href="../styles/iconfont/iconfont.css">
+    <link rel="stylesheet" href="../styles/pages/index.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="container-left">
+            <div class="search-panel panel">
+                <div class="panel-bar">
+                    <h1 class="panel-title">搜索栏</h1>
+                    <div class="drop-btn btn iconfont">&#xe62c;</div>
+                    <div class="close-btn btn iconfont">&#xe624;</div>
+                </div>
+                <div class="panel-content">
+                    <div class="search-wrap">
+                        <div class="search-bar">
+                            <input type="search" name="search" id="search" class="search" placeholder="搜索">
+                        </div>
+                        <div class="search-btn-wrap btn-group">
+                            <button class="set btn btn-green" id="search-set">设置</button>
+                            <button class="start btn btn-blue" id="search-start">搜索</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="directory-tree-wrap">
+                <div class="directory-panel panel">
+                    <div class="panel-bar">
+                        <div class="panel-title">目录栏</div>
+                        <div class="drop-btn btn iconfont">&#xe62c;</div>
+                        <div class="close-btn btn iconfont">&#xe624;</div>
+                    </div>
+                    <div class="panel-content"></div>
+                </div>
+            </div>
+        </div>
+        <div class="container-right">
+            <div class="default-bar">
+                <div class="default-bar-title">
+                    编辑框
+                </div>
+            </div>
+            <div class="tab">
+                <div class="tab-bar">
+                    <div class="tab-btn active">导出</div>
+                    <div class="tab-btn">文件一</div>
+                </div>
+                <div class="tab-content">
+                    <div class="tab-content-item files-export active"></div>
+                    <div class="tab-content-item">文件一</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
+<script src="../scripts/pages/index.js"></script>
