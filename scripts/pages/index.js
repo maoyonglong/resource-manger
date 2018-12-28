@@ -1,4 +1,5 @@
-const { ipcRenderer } = require('electron')
+const { ipcRenderer } = require('electron');
+const fs = require('fs');
 
 // tools
 let ClassList = {
@@ -9,13 +10,13 @@ let ClassList = {
         el.classList.remove(...classNames);
     }
 };
-let Element = {
+class Element {
     createElement(nodes, rootNode) {
         let root = rootNode ? this.parseNode(rootNode) : document.createElement("div");
         this.root = root;
         ClassList.add(root, "root");
         return this.createTree(root, nodes);
-    },
+    }
     createTree(parent, nodes) {
         let root = this.root;
         for(let i = 0; i < nodes.length; i++){
@@ -31,7 +32,7 @@ let Element = {
         }
 
         return parent;
-    },
+    }
     parseNode(curNode, root, parent) {
         // 创建dom
         let el = document.createElement(curNode.kind || "div");
@@ -77,8 +78,8 @@ let Element = {
             }
         }
         return el;
-    },
-    getChildren(parent, selector) {
+    }
+    static getChildren(parent, selector) {
         let els = parent.querySelectorAll(selector);
         let children = [];
         for(let i = 0; i < els.length; i++){
@@ -96,10 +97,27 @@ let Sys = {
     contextMenu: undefined,
     initEvent() {
         document.addEventListener("click", () => {
-            console.log(this.contextMenu)
-            if(this.contextMenu) {
-                this.contextMenu.remove();
-            }
+            let contextMenu = document.querySelectorAll('.context-menu');
+            contextMenu.forEach((item) => {
+                item.remove();
+            });
+        });
+        let fileParser = new FileParser();
+        let directory = new Directory();
+        ipcRenderer.on('openDirectory-message', (event, paths) => {
+            let nodes = [];
+            let nodesPromise = fileParser.parseToNodes(paths, nodes);
+            nodesPromise.then(() => {
+                directory.init(nodes);
+            })
+        });
+        ipcRenderer.on("openFile-message", (event, paths) => {
+            let nodes = [];
+            console.log(paths)
+            let nodesPromise = fileParser.parseToNodes(paths, nodes);
+            nodesPromise.then(() => {
+                directory.init(nodes);
+            })
         });
     }
 };
@@ -150,9 +168,17 @@ class Panel {
     // 设置content高度
     refreshContentHeight() {
         this.content.style.height = "auto";
-        let height = this.content.clientHeight;
-        this.content.style.height = height + 'px';
-        this.heightArr[0] = height;
+        let clientHeight = this.content.clientHeight;
+        let maxHeight = document.body.clientHeight - this.content.offsetTop;
+        let scrollTop = this.content.scrollTop;
+        if(clientHeight < maxHeight) {
+            this.content.style.height = clientHeight + 'px';
+            this.heightArr[0] = clientHeight;
+        }else if(clientHeight > maxHeight) {
+            this.content.style.height = maxHeight + 'px';
+            this.heightArr[0] = maxHeight;
+        }
+        this.content.scrollTop = scrollTop;
     }
 }
 
@@ -253,7 +279,7 @@ class Popup {
                 ]
             }
         ];
-        return Element.createElement(nodes);
+        return (new Element()).createElement(nodes);
     }
     focus(root, parent, el) {
         let popup;
@@ -289,6 +315,157 @@ class Popup {
     }
 }
 
+// fileParser
+class FileParser {
+    constructor(args = {}) {
+        this.searchArgs = {
+            isSearch: args.isSearch,
+            extensions: args.extensions,
+            fileName: args.fileName,
+            fileContent: args.fileContent,
+            query: args.query
+        }
+    }
+    getFileDirectory(path) {
+        path = path.substring(0, path.lastIndexOf('\\')+1);
+        return path;
+    }
+    getFileName(path) {
+        let arr = path.split(/[/\\]/);
+        return arr[arr.length-1];
+    }
+    getFileNameWithoutExtensions(fileName) {
+        return fileName.substring(0, fileName.lastIndexOf('.'));
+    }
+    getFileExtension(path) {
+        let arr = path.split('.');
+        return arr[arr.length-1];
+    }
+    getFileList(dir) {
+        return new Promise((reslove, reject) => {
+            fs.readdir(dir, (err, files) => {
+                if(err) reject(err);
+                reslove(files);
+            });
+        });
+    }
+    pathToStats(path) {
+        return new Promise((reslove, reject) => {
+            fs.stat(path, (err, stats) => {
+                if(err) reject(err);
+                reslove(stats);
+            });
+        });
+    }
+    parseToNodes(filePaths, node) {
+        try{
+            let promises = [];
+            for(let i = 0; i < filePaths.length; i++){
+                let curFilePath = filePaths[i];
+                let statsPromise = this.pathToStats(curFilePath);
+                let promise = new Promise((reslove, reject) => {
+                    statsPromise.then((stats) => {
+                        let fileName = this.getFileName(curFilePath);
+                        if(stats.isDirectory()) {
+                            let pathPromise = this.getFileList(curFilePath);
+                            pathPromise.then((paths) => {
+                                paths.forEach((item, idx, arr) => {
+                                    arr[idx] = curFilePath + '\\' + item;
+                                });
+                                let folder = {
+                                    name: fileName,
+                                    kind: 'folder',
+                                    url: curFilePath,
+                                    children: []
+                                }
+                                node.push(folder);
+                                this.parseToNodes(paths, folder.children).then(() => {
+                                    reslove();
+                                });
+                            });
+                        }else {
+                            let searchArgs = this.searchArgs;
+                            if(!searchArgs.isSearch){
+                                node.push({
+                                    name: fileName,
+                                    kind: 'file',
+                                    url: curFilePath
+                                });
+                                reslove();
+                            }else{
+                                let filterPromse = new Promise((reslove, reject) => {
+                                    // 搜索筛选
+                                    let extensions = this.getFileExtension(curFilePath);
+                                    let query = searchArgs.query;
+                                    let hasContentPromise;
+                                    let flag = true; // 该文件是否满足条件
+                                    // 如果筛选扩展名
+                                    if(searchArgs.extensions && extensions !== this.getFileExtension(query)){
+                                        console.log(1);
+                                        flag = false;
+                                    }
+                                    // 如果筛选文件名
+                                    if(searchArgs.fileName && fileName.indexOf(this.getFileNameWithoutExtensions(query)) < 0){
+                                        console.log(2)
+                                        flag = false;
+                                    }
+                                    // 如果筛选文件内容
+                                    if(searchArgs.fileContent){
+                                        console.log(3)
+                                        hasContentPromise = this.FileHasContent(curFilePath, query);
+                                    }
+                                    // 如果筛选成功
+                                    if(hasContentPromise){
+                                        console.log(4)
+                                        hasContentPromise().then((isTrue) => {
+                                            flag = isTrue;
+                                            reslove(flag);
+                                        });
+                                    }else{
+                                        reslove(flag);
+                                    }
+                                });
+                                filterPromse.then((flag) => {
+                                    if(flag){
+                                        node.push({
+                                            name: fileName,
+                                            kind: 'file',
+                                            url: curFilePath
+                                        });
+                                    }
+                                    reslove();
+                                }) 
+                            }
+                        }
+                    });
+                });
+                promises.push(promise);
+            }
+            return Promise.all(promises);
+        }catch(err) {
+            throw err;
+        }      
+    }
+    FileHasContent(path, content) {
+        return new Promise((reslove, reject) => {
+            this.readFile(path).then((data) => {
+                let result = data.indexOf(content) > 0;
+                reslove(result);
+            });
+        });
+    }
+    readFile(path) {
+        return new Promise((reslove, reject) => {
+            fs.readFile(path, (err, data) => {
+                if(err) {
+                    reject(err);
+                }
+                reslove(data);
+            });
+        }); 
+    }
+}
+
 // search
 class Search {
     constructor() {
@@ -305,7 +482,7 @@ class Search {
         searchStart.onclick = () => {
             this.startSearch();
         };
-        ipcRenderer.on("openDirectory-reply", (event, paths) => {
+        ipcRenderer.on("searchArea-reply", (event, paths) => {
             this.searchArea = paths;
         });
     }
@@ -419,7 +596,7 @@ class Search {
     }
     setSearchArea() {
         return () => {
-            ipcRenderer.send("openDirectory-message");
+            ipcRenderer.send("searchArea-message");
         }
     }
     startSearch() {
@@ -429,7 +606,23 @@ class Search {
         let extensions = this.extensions;
         let content = this.content;
         let query = this.searchInput.value;
-        console.log(searchArea, filename, extensions, content, query);
+        if(!searchArea || !query || !(filename || extensions || content)) {
+            alert("请正确设置搜索条件");
+        }
+        // 搜索文件 --> 获取文件路径和文件名和类型
+        let nodes = [];
+        let fileParser = new FileParser({
+            isSearch: true,
+            extensions,
+            fileName: filename,
+            fileContent: content,
+            query
+        });
+        let nodesPromise = fileParser.parseToNodes(searchArea, nodes);
+        nodesPromise.then(() => {
+            let directory = new Directory();
+            directory.init(nodes);
+        });
     }
 }
 
@@ -440,68 +633,12 @@ class Directory {
         this.panel = this.directoryPanel.panel;
         this.directoryContent = this.panel.content;
     }
-    create() {
+    init(nodes) {
         let root = {
             classNames: ["directory-tree"]
         };
-        let nodes = [
-            {
-                url: "url",
-                kind: "folder",
-                name: "name",
-                children: [
-                    {
-                        url: "url",
-                        name: "name",
-                        kind: "file",
-                        url: "url"
-                    },
-                    {
-                        url: "url",
-                        name: "name",
-                        kind: "folder",
-                        url: "url",
-                        children: [
-                            {
-                                url: "url",
-                                name: "name",
-                                kind: "file",
-                                url: "url"
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                url: "url",
-                kind: "folder",
-                name: "name",
-                children: [
-                    {
-                        url: "url",
-                        name: "name",
-                        kind: "file",
-                        url: "url"
-                    },
-                    {
-                        url: "url",
-                        name: "name",
-                        kind: "folder",
-                        url: "url",
-                        children: [
-                            {
-                                url: "url",
-                                name: "name",
-                                kind: "file",
-                                url: "url"
-                            }
-                        ]
-                    }
-                ]
-            }
-        ];
         nodes = this.createNodes(nodes, 1);
-        let el = Element.createElement(nodes, root);
+        let el = (new Element()).createElement(nodes, root);
         this.directoryContent.appendChild(el);
         this.panel.refreshContentHeight();
     }
@@ -514,7 +651,6 @@ class Directory {
                 ClassList.remove(activeNode, "active");
             }
             ClassList.add(el, "active");
-            el.cMenu.remove();
         }
     }
     toggleFolder(root, parent, el) {
@@ -541,49 +677,58 @@ class Directory {
         }
         return arr;
     }
-    createContextMenu(nodeKind) {
-        return (root, parent, el) => {
-            return () => {
-                let contextMenu = [
-                    {
-                        classNames: ["context-menu-item"],
-                        text: "复制",
-                        events: {}
-                    },
-                    {
-                        classNames: ["context-menu-item"],
-                        text: "剪切",
-                        events: {}
-                    },
-                    {
-                        classNames: ["context-menu-item"],
-                        text: "删除",
-                        events: {}
-                    },
-                    {
-                        classNames: ["context-menu-item"],
-                        text: "在资源管理器显示",
-                        events: {}
-                    }
-                ];
-                if(nodeKind === 'folder') {
-                    contextMenu.unshift({
-                        classNames: ["context-menu-item"],
-                        text: "新建",
-                        events: {}
-                    }, {
-                        classNames: ["context-menu-item"],
-                        text: "粘贴",
-                        events: {}
-                    });
-                }
-                el.removeEventListener("contextmenu", this.createContextMenu(nodeKind));
-                const cMenu = new ContextMenu(el, contextMenu);
-                el.cMenu = cMenu;
-                cMenu.initEvent();
+    createContextMenu(el, nodeKind) {
+        let directoryContent = this.directoryContent;
+        let contextMenu = [
+            {
+                classNames: ["context-menu-item"],
+                text: "复制",
+                events: {}
+            },
+            {
+                classNames: ["context-menu-item"],
+                text: "剪切",
+                events: {}
+            },
+            {
+                classNames: ["context-menu-item"],
+                text: "删除",
+                events: {}
+            },
+            {
+                classNames: ["context-menu-item"],
+                text: "在资源管理器显示",
+                events: {}
             }
+        ];
+        if(nodeKind === 'folder') {
+            contextMenu.unshift({
+                classNames: ["context-menu-item"],
+                text: "新建",
+                events: {}
+            }, {
+                classNames: ["context-menu-item"],
+                text: "粘贴",
+                events: {}
+            });
         }
-        
+        const cMenu = new ContextMenu(el, contextMenu);
+        const getContextMenu = () => {
+            return directoryContent.querySelectorAll('.context-menu');
+        };
+        cMenu.initEvent((menu) => {
+            let contextMenus = getContextMenu();
+            for(let i = 0; i < contextMenus.length; i++) {
+                let contextMenu = contextMenus[i];
+                if(menu !== contextMenu){
+                    contextMenu.remove();
+                }
+            }
+        }, () => { 
+            getContextMenu().forEach((item) => {
+                item.remove();
+            }); 
+        }); 
     }
     createTmp(layer, name, url, nodeKind, nodes) {
         let icon = nodeKind === 'folder' ? '&#xe635;' : '&#xe65f;';
@@ -591,12 +736,12 @@ class Directory {
             classNames: [nodeKind+'-node', "node"],
             events: {
                 click: this.nodeClickHandler.bind(this),
-                contextmenu: this.createContextMenu(nodeKind)
             },
             fun: (el) => {
+                this.createContextMenu(el, nodeKind);
                 el.style.textIndent = layer * 20 + 'px';
             },
-            attrs: { url },
+            attrs: { url, title: name },
             children: [
                 {
                     kind: "input",
@@ -605,7 +750,6 @@ class Directory {
                 {
                     classNames: ["icon", "iconfont"],
                     kind: "span",
-                    html: icon,
                 },
                 {
                     classNames: ["name"],
@@ -635,59 +779,35 @@ class Directory {
 // contextMenu
 class ContextMenu {
     constructor(el, menu) {
-        menu = [
-            {
-                classNames: ["context-menu-item"],
-                text: "新建",
-                events: {}
-            },
-            {
-                classNames: ["context-menu-item"],
-                text: "删除",
-                events: {}
-            },
-            {
-                classNames: ["context-menu-item"],
-                text: "复制",
-                events: {}
-            },
-            {
-                classNames: ["context-menu-item"],
-                text: "剪切",
-                events: {}
-            },
-            {
-                classNames: ["context-menu-item"],
-                text: "粘贴",
-                events: {}
-            },
-            {
-                classNames: ["context-menu-item"],
-                text: "在资源管理器显示",
-                events: {}
-            }
-        ];
         let root = {
             classNames: ["context-menu"],
+            fun: (el) => {
+                el.style.textIndent = 0;
+            }
         }
         this.el = el;
-        this.menu = Element.createElement(menu, root);
+        this.menu = (new Element()).createElement(menu, root);
     }
-    initEvent(callback) {
+    initEvent(callback1, callback2) {
         let el = this.el;
         el.addEventListener("contextmenu", (e) => {
             e.stopPropagation();
             e.preventDefault();
             let x = e.clientX;
             let y = e.clientY;
-            console.log(x, y)
             this.menu.style.left = x + 'px';
             this.menu.style.top = y + 'px';
             el.appendChild(this.menu);
-            Sys.contextMenu = this.menu;
-            if(callback) {
-                callback();
+            if(callback1) {
+                callback1(this.menu);
             }
+        }, false);
+        el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if(callback2){
+                callback2(this.menu);
+            }
+            this.remove();
         }, false);
     }
     remove() {
@@ -697,8 +817,6 @@ class ContextMenu {
 
 window.addEventListener("load", () => {
 
-    Sys.initEvent();
-
     Panel.initPanels();
 
     const tab = new Tab();
@@ -707,7 +825,6 @@ window.addEventListener("load", () => {
     const search = new Search();
     search.initEvent();
 
-    const directory = new Directory();
-    directory.create();
+    Sys.initEvent();
 
 });

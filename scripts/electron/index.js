@@ -21,9 +21,9 @@ function createWindow () {
 
 }
 
-ipcMain.on("openDirectory-message", (event) => {
+ipcMain.on("searchArea-message", (event) => {
   openDirectoryDialog().then((paths) => {
-    event.sender.send("openDirectory-reply", paths);
+    event.sender.send("searchArea-reply", paths);
   });
 });
 
@@ -32,7 +32,7 @@ app.on('ready', () => {
   createWindow();
   // init the menu
   initMenu();
-  // init shortcut
+  // init the shortcut
   loadShortCutsConfig();
 });
 
