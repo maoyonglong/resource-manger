@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, dialog } = require('electron');
 const fs = require('fs');
 
 // tools
@@ -8,6 +8,9 @@ let ClassList = {
     },
     remove(el, ...classNames) {
         el.classList.remove(...classNames);
+    },
+    has(el, className) {
+        return el.classList.contains(className);
     }
 };
 class Element {
@@ -741,15 +744,20 @@ class Directory {
                 this.createContextMenu(el, nodeKind);
                 el.style.textIndent = layer * 20 + 'px';
             },
-            attrs: { url, title: name },
+            attrs: { title: url, name },
             children: [
                 {
                     kind: "input",
-                    type: "checkbox"
+                    type: "checkbox",
+                    classNames: ["select-btn"],
+                    events: {
+                        click: this.selectNode.bind(this)
+                    }
                 },
                 {
                     classNames: ["icon", "iconfont"],
                     kind: "span",
+                    html: icon
                 },
                 {
                     classNames: ["name"],
@@ -773,6 +781,44 @@ class Directory {
             });
         }
         return tmp;
+    }
+    getUnSelectedChildNodes(parent){
+        let children = parent.children;
+        let unSelectedChildNodes = [];
+        for(let i = 0; i < children.length; i++){
+            let child = children[i];
+            if(ClassList.has(child, 'node')){
+                if(!ClassList.has(child, 'selected')){
+                    unSelectedChildNodes.push(child);
+                }
+            }
+        }
+        return unSelectedChildNodes;
+    }
+    selectNode(root, parent, el) {
+        return () => {
+            if(el.checked){
+                ClassList.add(parent, 'selected');
+                let isFolder = ClassList.has(parent, 'folder-node');
+                if(isFolder){
+                    let unSelectedChildNodes = this.getUnSelectedChildNodes(parent);
+                    console.log(unSelectedChildNodes);
+                    unSelectedChildNodes.forEach((item) => {
+                        let children = item.children;
+                        for(let i = 0; i < children.length; i++){
+                            if(ClassList.has(children[i], 'select-btn')){
+                                let checkbox = children[i];
+                                checkbox.checked = false;
+                                checkbox.click();
+                                break;
+                            }
+                        }
+                    });
+                }
+            }else{
+                ClassList.remove(parent, 'selected');
+            }
+        }
     }
 }
 
@@ -815,6 +861,86 @@ class ContextMenu {
     }
 }
 
+class FilerEditor {
+    // read
+    readFile() {
+
+    }
+    // copy
+    copyFile() {
+
+    }
+    // paste
+    pasteFile() {
+
+    }
+    // delete
+    deleteFile() {
+
+    }
+    // cut
+    cut() {
+
+    }
+}
+
+// 
+class Export {
+    constructor() {
+        this.el = document.querySelector('.files-export');
+    }
+    initEvent() {
+        let el = this.el;
+        ipcRenderer.on('output-reply', (event, args) => {
+            console.log(args);
+        })
+        el.addEventListener('click', () => {
+            let nodes = this.getSelectedFilesNodes();
+            console.log(nodes);
+            ipcRenderer.send('output-message', nodes);
+        }, false);
+    }
+    getSelectedFilesNodes() {
+        let trees = document.querySelectorAll('.directory-tree');
+        let nodes = [];
+        for(let i = 0; i < trees.length; i++){
+            let tree = trees[i];
+            let tmp = this.getSelectedNodesTmp(tree);
+            nodes = nodes.concat(tmp);
+        }
+        
+        return nodes;
+    }
+    getSelectedNodesTmp(root, nodes = []){
+        let children = root.children;
+        for(let i = 0; i < children.length; i++){
+            let child = children[i];
+            if(ClassList.has(child, 'folder-node')){
+                if(ClassList.has(child, 'selected')){
+                    let childrenNodes = [];
+                    let name = child.name;
+                    let url = child.title;
+                    nodes.push({
+                        name, url, children: childrenNodes
+                    });
+                    this.getSelectedNodesTmp(child, childrenNodes);
+                }else{
+                    this.getSelectedNodesTmp(child, nodes);
+                }
+            }else if(ClassList.has(child, 'file-node')){
+                if(ClassList.has(child, 'selected')){
+                    nodes.push({
+                        name: child.name,
+                        url: child.title
+                    });
+                }
+            }
+        }
+        
+        return nodes;
+    }
+}
+
 window.addEventListener("load", () => {
 
     Panel.initPanels();
@@ -824,6 +950,9 @@ window.addEventListener("load", () => {
 
     const search = new Search();
     search.initEvent();
+
+    const output = new Export();
+    output.initEvent();
 
     Sys.initEvent();
 

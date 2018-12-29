@@ -20,7 +20,18 @@ function openDirectoryDialog(){
     });
 }
 
+function openSaveDialog() {
+    return new Promise((reslove, reject) => {
+        dialog.showSaveDialog(global.win, {
+            "title": "导出所选文件"
+        }, (filename) => {
+            reslove(filename);
+        });
+    });
+}
+
 module.exports = {
     openFileDialog,
-    openDirectoryDialog
+    openDirectoryDialog,
+    openSaveDialog
 };

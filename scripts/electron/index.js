@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { initMenu } = require("./menu");
 const { loadShortCutsConfig } = require("./shortcut");
-const { openDirectoryDialog, openFileDialog } = require("./file");
+const { openDirectoryDialog, openFileDialog, openSaveDialog, saveFile } = require("./file");
 
 let win;
 
@@ -24,6 +24,13 @@ function createWindow () {
 ipcMain.on("searchArea-message", (event) => {
   openDirectoryDialog().then((paths) => {
     event.sender.send("searchArea-reply", paths);
+  });
+});
+
+ipcMain.on("output-message", (event, args) => {
+  openSaveDialog().then((path) => {
+    saveFile(path, args);
+    event.sender.send("output-reply", filename);
   });
 });
 
