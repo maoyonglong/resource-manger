@@ -648,7 +648,7 @@ class Directory {
     nodeClickHandler(root, parent, el) {
         return (e) => {
             e.stopPropagation();
-            let activeNode = root.querySelector(".node.active");
+            let activeNode = this.directoryPanel.querySelector(".node.active");
             if(activeNode === el) return;
             if(activeNode){
                 ClassList.remove(activeNode, "active");
@@ -858,29 +858,6 @@ class ContextMenu {
     }
     remove() {
         this.menu.remove();
-    }
-}
-
-class FilerEditor {
-    // read
-    readFile() {
-
-    }
-    // copy
-    copyFile() {
-
-    }
-    // paste
-    pasteFile() {
-
-    }
-    // delete
-    deleteFile() {
-
-    }
-    // cut
-    cut() {
-
     }
 }
 

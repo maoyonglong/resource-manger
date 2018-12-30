@@ -69,6 +69,9 @@
 .directory-panel .panel-content{
     height: 100%;
 }
+.directory-panel .panel-content::-webkit-scrollbar {
+    display: none;
+}
 
 .container-right .tab {
     height: calc(100% - 44px);
