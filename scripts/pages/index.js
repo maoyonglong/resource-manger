@@ -14,10 +14,16 @@ let ClassList = {
     }
 };
 class Element {
-    createElement(nodes, rootNode) {
-        let root = rootNode ? this.parseNode(rootNode) : document.createElement("div");
+    createElement(nodes, rootNode, isDom) {
+        let root;
+        if(isDom) {
+            root = rootNode;
+        }else{
+            root = rootNode ? this.parseNode(rootNode) : document.createElement("div");
+            ClassList.add(root, "root");
+        }
         this.root = root;
-        ClassList.add(root, "root");
+        
         return this.createTree(root, nodes);
     }
     createTree(parent, nodes) {
@@ -111,6 +117,7 @@ let Sys = {
             let nodes = [];
             let nodesPromise = fileParser.parseToNodes(paths, nodes);
             nodesPromise.then(() => {
+                console.log(nodes);
                 directory.init(nodes);
             })
         });
@@ -674,7 +681,7 @@ class Directory {
         let arr = [];
         for(let i = 0; i < nodes.length; i++){
             let curNode = nodes[i];
-            let node = this.createTmp(layer, curNode.name, curNode.url, curNode.kind,
+            let node = this.createTmp(layer, curNode, 
             curNode.children ? this.createNodes(curNode.children, layer+1) : undefined);
             arr.push(node);
         }
@@ -686,33 +693,103 @@ class Directory {
             {
                 classNames: ["context-menu-item"],
                 text: "复制",
-                events: {}
+                events: {
+                    click: (root, parent, el) => {
+                        return () => {
+                            let nodeCopy = parent.parentNode;
+                            Sys.nodePlate = undefined; // 先清空剪切板
+                            Sys.nodePlate = nodeCopy; // 剪切板的node为nodeCopy
+                            Sys.nodePlateStatus = 'copy'; // 剪切板是复制状态
+                        };
+                    }
+                }
             },
             {
                 classNames: ["context-menu-item"],
                 text: "剪切",
-                events: {}
+                events: {
+                    click: (root, parent, el) => {
+                        return () => {
+                            parent.parentNode.style.opacity = '0.5';
+                            let nodeCut = parent.parentNode;
+                            Sys.nodePlate = undefined;
+                            Sys.nodePlate = nodeCut;
+                            Sys.nodePlateStatus = 'cut';
+                        }  
+                    }
+                }
             },
             {
                 classNames: ["context-menu-item"],
                 text: "删除",
-                events: {}
+                events: {
+                    click: (root, parent, el) => {
+                        return () => {
+                            let tmp = parent.parentNode.tmp;
+                            if(parent.parentNode.layer > 1){
+                                let oChildren = parent.parentNode.parentNode.children;
+                                oChildren.splice(oChildren.indexOf(tmp), 1);
+                            }
+                            
+                            parent.parentNode.remove();
+                        } 
+                    }
+                }
             },
             {
                 classNames: ["context-menu-item"],
                 text: "在资源管理器显示",
-                events: {}
+                events: {
+                    click: (root, parent, el) => {
+                        return () => {
+
+                        };
+                    }
+                }
             }
         ];
         if(nodeKind === 'folder') {
             contextMenu.unshift({
                 classNames: ["context-menu-item"],
                 text: "新建",
-                events: {}
+                events: {
+                    click: (root, parent, el) => {
+                        return () => {
+                            let newNode = document.createElement('div');
+                        };
+                    }
+                }
             }, {
                 classNames: ["context-menu-item"],
                 text: "粘贴",
-                events: {}
+                events: {
+                    click: (root, parent, el) => {
+                        return () => {
+                            let nodePaste = Sys.nodePlate;
+                            let plateStatus = Sys.nodePlateStatus;
+                            let layer = parent.parentNode.layer+1;
+                            if(plateStatus === 'copy'){
+                                let tmpCopy = JSON.parse(JSON.stringify(nodePaste.tmp));
+                                let dChildren = parent.parentNode.tmp.children;
+                                dChildren.push(tmpCopy);
+                                if(!(tmpCopy instanceof Array)) {
+                                    tmpCopy = [tmpCopy];
+                                }
+                                let nodes = this.createNodes(tmpCopy, layer);
+                                (new Element()).createElement(nodes, parent.parentNode, true);
+                            }else if(plateStatus === 'cut'){
+                                let oChildren = nodePaste.parentNode.tmp.children;
+                                oChildren.splice(oChildren.indexOf(nodePaste.tmp), 1);
+                                let dChildren = parent.parentNode.tmp.children;
+                                dChildren.push(nodePaste.tmp);
+                                nodePaste.style.textIndent = layer * 20 + 'px';
+                                nodePaste.style.opacity = '1.0';
+                                nodePaste.parentNode.removeChild(nodePaste);
+                                parent.parentNode.appendChild(nodePaste);
+                            }
+                        }
+                    }
+                }
             });
         }
         const cMenu = new ContextMenu(el, contextMenu);
@@ -733,7 +810,10 @@ class Directory {
             }); 
         }); 
     }
-    createTmp(layer, name, url, nodeKind, nodes) {
+    createTmp(layer, curNode, nodes) {
+        let name = curNode.name;
+        let url = curNode.url;
+        let nodeKind = curNode.kind;
         let icon = nodeKind === 'folder' ? '&#xe635;' : '&#xe65f;';
         let tmp = {
             classNames: [nodeKind+'-node', "node"],
@@ -744,7 +824,7 @@ class Directory {
                 this.createContextMenu(el, nodeKind);
                 el.style.textIndent = layer * 20 + 'px';
             },
-            attrs: { title: url, name },
+            attrs: { title: url, name, tmp: curNode, layer },
             children: [
                 {
                     kind: "input",
@@ -932,5 +1012,7 @@ window.addEventListener("load", () => {
     output.initEvent();
 
     Sys.initEvent();
+
+    console.log(jQuery);
 
 });

@@ -18,5 +18,6 @@
   "homepage": "https://github.com/maoyonglong/resource-manger#readme",
   "devDependencies": {
     "electron": "^3.0.12"
-  }
+  },
+  "dependencies": {}
 }
