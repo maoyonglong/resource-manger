@@ -1,19 +1,53 @@
-const { ipcRenderer, dialog } = require('electron');
+const { ipcRenderer, shell, dialog } = require('electron');
 const fs = require('fs');
-
-// tools
+/**
+ *  @name ClassList
+ *  @description class类名操作对象 
+ */
 let ClassList = {
+    /**
+     * @method add
+     * @description 给DOM对象添加类名
+     * @param { HTMLElement } el 
+     * @param { string[, string [, ...]] } className1, classNames2, ...
+     */
     add(el, ...classNames) {
         el.classList.add(...classNames);
     },
+    /**
+     *
+     * @method remove
+     * @description 移除DOM对象的类名
+     * @param { HTMLElement } el 
+     * @param { string[, string [, ...]] } className1, classNames2, ...
+     */
     remove(el, ...classNames) {
         el.classList.remove(...classNames);
     },
+    /**
+     * @method has
+     * @description 判断DOM对象是否包含某个类名
+     * @param { HTMLElement } el 
+     * @param { string } className 
+     */
     has(el, className) {
         return el.classList.contains(className);
     }
 };
+/**
+ * @class Element
+ * @description dom元素操作类
+ */
 class Element {
+    /**
+     * @method createElement
+     * @for Element
+     * @description 创建DOM结点
+     * @param { Array } nodes 用JSON数组标志的DOM模板
+     * @param { JSON OR HTMLElement } rootNode 根结点 可选
+     * @param { boolean } isDom rootNode是否为DOM结点 可选
+     * @return { HTMLElement } 模板生成的结点树
+     */
     createElement(nodes, rootNode, isDom) {
         let root;
         if(isDom) {
@@ -22,10 +56,17 @@ class Element {
             root = rootNode ? this.parseNode(rootNode) : document.createElement("div");
             ClassList.add(root, "root");
         }
-        this.root = root;
-        
+        this.root = root;        
         return this.createTree(root, nodes);
     }
+    /**
+     * @method createTree
+     * @for Element
+     * @description 按JSON数组模板创建DOM树
+     * @param { HTMLElement } parent 父结点
+     * @param { Array } nodes DOM对象的JSON数组模板
+     * @return { HTMLElement } 按模板生成结点树后的父结点
+     */
     createTree(parent, nodes) {
         let root = this.root;
         for(let i = 0; i < nodes.length; i++){
@@ -39,9 +80,17 @@ class Element {
                 parent.appendChild(el);
             }
         }
-
         return parent;
     }
+    /**
+     * @method parseNode
+     * @for Element
+     * @description 将JSON对象模板转成DOM结点
+     * @param { JSON } curNode JSON对象模板
+     * @param { HTMLElement } root 根节点 
+     * @param { HTMLElement } parent 父节点
+     * @return { HTMLElement } 返回创建的DOM结点
+     */
     parseNode(curNode, root, parent) {
         // 创建dom
         let el = document.createElement(curNode.kind || "div");
@@ -83,11 +132,29 @@ class Element {
         if(curNode.events){
             let events = curNode.events;
             for(let key in events){
+                // 将root、parent、el传入事件闭包
+                /* 
+                    events[key]事件的形式应该是:
+                    function(root, parent, el) {
+                        // handler
+                        return function() {
+                            // handler code
+                        }
+                    }
+                 */
                 el.addEventListener(key, events[key](root, parent, el), false);
             }
         }
         return el;
     }
+    /**
+     * @method getChildren
+     * @static
+     * @for Element
+     * @param { HTMLElement } parent 父结点
+     * @param { string } selector 选择器表达式
+     * @return { HTMLCollection } 孩子结点集合
+     */
     static getChildren(parent, selector) {
         let els = parent.querySelectorAll(selector);
         let children = [];
@@ -100,11 +167,19 @@ class Element {
         return children;
     }
 };
-
-// sys
+/** 
+ * @name Sys
+ * @description 系统操作对象
+ */
 let Sys = {
+    // 当前弹出菜单
     contextMenu: undefined,
+    /**
+     * @method initEvent
+     * @description 初始化系统（页面）相关事件
+     */
     initEvent() {
+        // 添加点击移除页面所有右键菜单的事件
         document.addEventListener("click", () => {
             let contextMenu = document.querySelectorAll('.context-menu');
             contextMenu.forEach((item) => {
@@ -113,39 +188,56 @@ let Sys = {
         });
         let fileParser = new FileParser();
         let directory = new Directory();
+        // 添加打开目录对话框事件
         ipcRenderer.on('openDirectory-message', (event, paths) => {
             let nodes = [];
             let nodesPromise = fileParser.parseToNodes(paths, nodes);
             nodesPromise.then(() => {
-                console.log(nodes);
                 directory.init(nodes);
-            })
+            });
         });
+        // 添加打开文件对话框事件
         ipcRenderer.on("openFile-message", (event, paths) => {
             let nodes = [];
             console.log(paths)
             let nodesPromise = fileParser.parseToNodes(paths, nodes);
             nodesPromise.then(() => {
                 directory.init(nodes);
-            })
+            });
         });
     }
 };
-
-// panel
+/**
+ * @class Panel
+ * @description 面板类
+ * @constructor 
+ *      @param { HTMLElement } panel panel的DOM  
+ */ 
 class Panel {
     constructor(panel) {
         this.panel = panel;
-        panel.panel = this; // 将panel对象保存到dom
+        // 将panel对象保存到dom
+        panel.panel = this; 
         this.dropBtn = panel.querySelector(".drop-btn");
         this.closeBtn = panel.querySelector(".close-btn");
         this.content = panel.querySelector(".panel-content");
     }
-    // 获取页面所有panel
+    /** 
+     * @method getPanels
+     * @static 
+     * @for Panel
+     * @description 获取页面所有panel
+     * @return { HTMLCollection } 页面中所有的类名为panel的DOM结点集合
+     */
     static getPanels() {
         return document.querySelectorAll(".panel");
     }
-    // 初始化所有panel
+    /**
+     * @method initPanels
+     * @static
+     * @for Panel
+     * @description 初始化所有panel
+     */
     static initPanels() {
         const panels = Panel.getPanels();
         for(let i = 0; i < panels.length; i++){
@@ -154,28 +246,39 @@ class Panel {
             panel.refreshContentHeight();
         }
     }
-    // 初始化panel的事件
+    /**
+     * @method initEvent
+     * @for Panel
+     * @description 初始化panel的事件
+     */
     initEvent() {
+        // 获取按钮和内容
         let dropBtn = this.dropBtn;
         let closeBtn = this.closeBtn;
         let content = this.content;
-
+        // 记录操作信息
         this.state = 0;
         this.stateArr = ["&#xe62c;", "&#xe62e;"];
         this.heightArr = [content.clientHeight, "0"];
-
-        dropBtn.addEventListener("click", () => {
+        // 添加下拉按钮点击事件
+        dropBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
             let state = this.state;
             this.state = state = (state + 1) % 2;
             dropBtn.innerHTML = this.stateArr[state];
             content.style.height = this.heightArr[state] + 'px';
         }, false);
-
-        closeBtn.addEventListener("click", () => {
+        // 添加关闭按钮点击事件
+        closeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
             this.panel.style.display = "none";
         });
     }
-    // 设置content高度
+    /** 
+     * @method refreshContentHeight
+     * @for Panel
+     * @description 设置或刷新content高度
+     */
     refreshContentHeight() {
         this.content.style.height = "auto";
         let clientHeight = this.content.clientHeight;
@@ -191,22 +294,34 @@ class Panel {
         this.content.scrollTop = scrollTop;
     }
 }
-
-// tab
+/**
+ * @class Tab
+ * @description 选项卡类
+ */
 class Tab{
-
-    // initEvent
+    /**
+     * @method initEvent
+     * @for Tab
+     * @description 初始化选项卡事件
+     */
     initEvent() {
+        // 获取页面所有的tab的按钮和内容
         let btns = document.querySelectorAll(".tab-btn");
         let items = document.querySelectorAll(".tab-content-item");
+        // 给各个按钮和内容对应添加事件处理
         for(let i = 0; i < btns.length; i++){
             let curBtn = btns[i];
             let curItem = items[i];
             this.addEvent(curBtn, curItem);
         }
     }
-
-    // addEvent
+    /**
+     * @method addEvent
+     * @for Tab
+     * @description 建立按钮和内容的事件处理关系
+     * @param { HTMLElement } 按钮结点
+     * @param { HTMLElement } 内容结点
+     */
     addEvent(btn, item) {
         btn.addEventListener("click", () => {
             let preActiveBtn = document.querySelector(".tab-btn.active");
@@ -217,8 +332,15 @@ class Tab{
             this.toggleTab(preActiveBtn, preActiveItem, btn, item);
         }, false);
     }
-
-    // toggleActive
+    /**
+     * @method toggleTab
+     * @for Tab
+     * @description 切换选项卡的选中和未选中状态
+     * @param { HTMLElement } preBtn 之前选中的按钮
+     * @param { HTMLElement } preItem 之前选中的内容
+     * @param { HTMLElement } curBtn 现在选中的按钮
+     * @param { HTMLElement } curItem 现在选中的内容
+     */
     toggleTab(preBtn, preItem, curBtn, curItem) {
         ClassList.remove(preBtn, "active");
         ClassList.remove(preItem, "active");
@@ -226,9 +348,16 @@ class Tab{
         ClassList.add(curItem, "active");
     }   
 }
-
-// popup
+/**
+ * @class Popup
+ * @description 弹出窗口类
+ */
 class Popup {
+    /**
+     * 
+     * @param {*} contentNodes 
+     * @param {*} callback 
+     */
     createTmp(contentNodes, callback) {
         let nodes = [
             {
@@ -324,8 +453,7 @@ class Popup {
         document.body.appendChild(root);
     }
 }
-
-// fileParser
+// 文件格式化类
 class FileParser {
     constructor(args = {}) {
         this.searchArgs = {
@@ -475,8 +603,7 @@ class FileParser {
         }); 
     }
 }
-
-// search
+// 搜索类
 class Search {
     constructor() {
         this.searchInput = document.querySelector("#search");
@@ -635,8 +762,7 @@ class Search {
         });
     }
 }
-
-// directory
+// 目录类
 class Directory {
     constructor() {
         this.directoryPanel = document.querySelector(".directory-panel");
@@ -665,8 +791,14 @@ class Directory {
     }
     toggleFolder(root, parent, el) {
         let state = 0;
-        let stateArr = ["none", "block"];
-        let dropIcon = ["&#xe62d;", "&#xe62c;"];
+        let stateArr = [
+            "none", 
+            "block"
+        ];
+        let dropIcon = [
+            "&#xe62d;", 
+            "&#xe62c;"
+        ];
         return () => {
             let folderContents = Element.getChildren(parent, ".node");
             state = (state + 1) % 2;
@@ -697,9 +829,12 @@ class Directory {
                     click: (root, parent, el) => {
                         return () => {
                             let nodeCopy = parent.parentNode;
-                            Sys.nodePlate = undefined; // 先清空剪切板
-                            Sys.nodePlate = nodeCopy; // 剪切板的node为nodeCopy
-                            Sys.nodePlateStatus = 'copy'; // 剪切板是复制状态
+                            // 先清空剪切板
+                            Sys.nodePlate = undefined; 
+                            // 剪切板的node为nodeCopy
+                            Sys.nodePlate = nodeCopy; 
+                            // 剪切板是复制状态
+                            Sys.nodePlateStatus = 'copy'; 
                         };
                     }
                 }
@@ -742,7 +877,7 @@ class Directory {
                 events: {
                     click: (root, parent, el) => {
                         return () => {
-
+                            shell.showItemInFolder(parent.parentNode.title);
                         };
                     }
                 }
@@ -810,21 +945,55 @@ class Directory {
             }); 
         }); 
     }
+    dragstartHandler(root, parent, el) {
+        return (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            e.dataTransfer.setData("html", el);
+            e.dataTransfer.dropEffect = 'move';
+        };
+    }
+    dragOverHandler(root, parent, el) {
+        return (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        };
+    } 
+    dragHandler(root, parent, el) {
+        return (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            let data = e.dataTransfer.getData('html');
+            data.remove();
+            el.appendChild(data);
+        };
+    }
     createTmp(layer, curNode, nodes) {
         let name = curNode.name;
         let url = curNode.url;
         let nodeKind = curNode.kind;
         let icon = nodeKind === 'folder' ? '&#xe635;' : '&#xe65f;';
         let tmp = {
-            classNames: [nodeKind+'-node', "node"],
+            classNames: [
+                nodeKind+'-node',
+                "node"
+            ],
             events: {
                 click: this.nodeClickHandler.bind(this),
+                dragstart: this.dragstartHandler.bind(this)
             },
             fun: (el) => {
                 this.createContextMenu(el, nodeKind);
                 el.style.textIndent = layer * 20 + 'px';
             },
-            attrs: { title: url, name, tmp: curNode, layer },
+            attrs: { 
+                title: url, 
+                name, 
+                tmp: curNode,
+                layer,
+                draggable: true 
+            },
             children: [
                 {
                     kind: "input",
@@ -835,7 +1004,10 @@ class Directory {
                     }
                 },
                 {
-                    classNames: ["icon", "iconfont"],
+                    classNames: [
+                        "icon", 
+                        "iconfont"
+                    ],
                     kind: "span",
                     html: icon
                 },
@@ -849,7 +1021,11 @@ class Directory {
         if(nodes){
             // push drop btn
             tmp.children.push({
-                classNames: ["drop-btn", "drop-up", "iconfont"],
+                classNames: [
+                    "drop-btn", 
+                    "drop-up", 
+                    "iconfont"
+                ],
                 kind: "span",
                 html: "&#xe62d;",
                 events: {
@@ -859,6 +1035,14 @@ class Directory {
             nodes.forEach((item) => {
                 tmp.children.push(item);
             });
+            tmp.events.drag = this.dragHandler.bind(this);
+            tmp.events.dragover = this.dragOverHandler.bind(this);
+        }else{
+            tmp.events.dblclick = (root, parent, el) => {
+                return () => {
+                    shell.openItem(url);
+                };
+            };
         }
         return tmp;
     }
@@ -875,7 +1059,7 @@ class Directory {
         }
         return unSelectedChildNodes;
     }
-    selectNode(root, parent, el) {
+    selectNode(root, parent, el) {    
         return () => {
             if(el.checked){
                 ClassList.add(parent, 'selected');
@@ -890,7 +1074,7 @@ class Directory {
                                 let checkbox = children[i];
                                 checkbox.checked = false;
                                 checkbox.click();
-                                break;
+                                break;        
                             }
                         }
                     });
@@ -898,11 +1082,10 @@ class Directory {
             }else{
                 ClassList.remove(parent, 'selected');
             }
-        }
+        };
     }
 }
-
-// contextMenu
+// 右键菜单类
 class ContextMenu {
     constructor(el, menu) {
         let root = {
@@ -940,39 +1123,57 @@ class ContextMenu {
         this.menu.remove();
     }
 }
-
-// 
+// 导出操作类
 class Export {
+    /**
+     *  构造函数，记录页面导出按钮的dom
+     */
     constructor() {
         this.el = document.querySelector('.files-export');
     }
+    /**
+     *  初始化事件
+     */
     initEvent() {
         let el = this.el;
         ipcRenderer.on('output-reply', (event, args) => {
             console.log(args);
         })
-        el.addEventListener('click', () => {
+        // 添加点击事件监听，导出选择文件
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // 获取选中文件对应的模板，发送消息给主进程
             let nodes = this.getSelectedFilesNodes();
-            console.log(nodes);
             ipcRenderer.send('output-message', nodes);
         }, false);
     }
+    /**
+     *  获取选中文件的模板
+     *  @return { Array } 文件模板
+     */
     getSelectedFilesNodes() {
+        // 获取文件dom树                                                                          
         let trees = document.querySelectorAll('.directory-tree');
+        // 获取dom对应的文件模板
         let nodes = [];
+        // 遍历各目录树，创建模板
         for(let i = 0; i < trees.length; i++){
             let tree = trees[i];
             let tmp = this.getSelectedNodesTmp(tree);
             nodes = nodes.concat(tmp);
-        }
-        
+        }                   
         return nodes;
     }
+    // 创建文件的模板
     getSelectedNodesTmp(root, nodes = []){
+        // 获取下一级目录模板
         let children = root.children;
+        // 遍历下一级目录
         for(let i = 0; i < children.length; i++){
             let child = children[i];
+            // 如果是文件夹
             if(ClassList.has(child, 'folder-node')){
+                // 记录选中文件夹
                 if(ClassList.has(child, 'selected')){
                     let childrenNodes = [];
                     let name = child.name;
@@ -981,10 +1182,14 @@ class Export {
                         name, url, children: childrenNodes
                     });
                     this.getSelectedNodesTmp(child, childrenNodes);
-                }else{
+                }
+                // 如果非选中文件夹，递归遍历再下一级目录
+                else{
                     this.getSelectedNodesTmp(child, nodes);
                 }
-            }else if(ClassList.has(child, 'file-node')){
+            }
+            // 如果是文件，记录选中文件
+            else if(ClassList.has(child, 'file-node')){
                 if(ClassList.has(child, 'selected')){
                     nodes.push({
                         name: child.name,
@@ -992,27 +1197,26 @@ class Export {
                     });
                 }
             }
-        }
-        
+        }   
         return nodes;
     }
 }
-
+// 页面载入后执行
 window.addEventListener("load", () => {
-
+    // 初始化页面所有面板
     Panel.initPanels();
-
+    // 创建选项卡对象
     const tab = new Tab();
+    // 初始化页面中选项卡事件
     tab.initEvent();
-
+    // 创建搜索对象
     const search = new Search();
+    // 初始化页面中的搜索栏事件
     search.initEvent();
-
+    // 创建导出对象
     const output = new Export();
+    // 初始化导出事件
     output.initEvent();
-
+    // 初始化系统事件
     Sys.initEvent();
-
-    console.log(jQuery);
-
 });
