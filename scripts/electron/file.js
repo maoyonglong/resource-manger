@@ -73,6 +73,18 @@ function saveFiles(path, outputs) {
     });
 }
 
+function createFile(path) {
+    let opPromise = new Promise((reslove, reject) => {
+        fs.writeFile(path, "", (err) => {
+            if(err) {
+                reject();
+            }
+            reslove();
+        });
+    });
+    return opPromise;
+}
+
 function createDirectory(path) {
     let opPromise = new Promise((reslove, reject) => {
         fs.exists(path, (exists) => {
@@ -109,5 +121,7 @@ module.exports = {
     openFileDialog,
     openDirectoryDialog,
     openSaveDialog,
-    saveOutputs
+    saveOutputs,
+    createFile,
+    createDirectory
 };

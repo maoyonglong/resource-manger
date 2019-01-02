@@ -89,6 +89,22 @@
     background-size: 268px 228px;
 }
 
+.newfile-input-wrap, .newfile-select-wrap{
+    font-size: 14px;
+    padding-top: 10px;
+}
+.newfile-input-label {
+    padding-right: 10px;
+    vertical-align: middle;
+}
+.newfile-input {
+    vertical-align: middle;
+}
+.newfile-select-label {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
 /* btn-group */
 .btn-group .btn{
     border-radius: 4px;

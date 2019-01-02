@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { initMenu } = require("./menu");
 const { loadShortCutsConfig } = require("./shortcut");
-const { openDirectoryDialog, openFileDialog, openSaveDialog, saveOutputs } = require("./file");
+const { openDirectoryDialog, openFileDialog, openSaveDialog, saveOutputs, createFile, createDirectory } = require("./file");
 
 let win;
 
@@ -34,6 +34,22 @@ ipcMain.on("output-message", (event, outputs) => {
     }
     event.sender.send("output-reply", path);
   });
+});
+
+ipcMain.on("createfile-message", (event, url) => {
+  createFile(url).then(() => {
+    event.sender.send("createfile-reply", "success");
+  }).catch(() => {
+    event.sender.send("createfile-reply", "fail");
+  });
+});
+
+ipcMain.on("createfolder-message", (event, url) => {
+  createDirectory(url).then(() => {
+    event.sender.send("createfolder-reply", "success");
+  }).catch(() => {
+    event.sender.send("createfolder-reply", "fail");
+  }); 
 });
 
 app.on('ready', () => {

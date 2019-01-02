@@ -280,6 +280,7 @@ class Panel {
      * @description 设置或刷新content高度
      */
     refreshContentHeight() {
+        console.log(1)
         this.content.style.height = "auto";
         let clientHeight = this.content.clientHeight;
         let maxHeight = document.body.clientHeight - this.content.offsetTop;
@@ -777,6 +778,70 @@ class Directory {
         let el = (new Element()).createElement(nodes, root);
         this.directoryContent.appendChild(el);
         this.panel.refreshContentHeight();
+        // 创建文件
+        ipcRenderer.on("createfile-reply", (event, msg) => {
+            if(msg === "success") {
+                console.log(msg);
+            }else {
+                alert("创建文件失败！");
+            } 
+        });
+        // 创建文件夹
+        ipcRenderer.on("createfolder-reply", (event, msg) => {
+            if(msg === "success") {
+                console.log(msg);
+            }else {
+                alert("创建文件夹失败！");
+            } 
+        });
+        // 删除文件
+        ipcRenderer.on("deletefile-reply", (events, msg) => {
+            if(msg === "success") {
+                console.log(msg);
+            }else {
+                alert("删除文件失败！");
+            } 
+        });
+         // 删除文件夹
+         ipcRenderer.on("deletefile-reply", (events, msg) => {
+            if(msg === "success") {
+                console.log(msg);
+            }else {
+                alert("删除文件夹失败！");
+            } 
+        });
+        // 移动文件
+        ipcRenderer.on("movefile-reply", (events, msg) => {
+            if(msg === "success") {
+                console.log(msg);
+            }else {
+                alert("移动文件失败！");
+            } 
+        });
+        // 移动文件夹
+        ipcRenderer.on("movefolder-reply", (events, msg) => {
+            if(msg === "success") {
+                console.log(msg);
+            }else {
+                alert("移动文件夹失败！");
+            } 
+        });
+        // 复制粘贴文件
+        ipcRenderer.on("copyfile-reply", (events, msg) => {
+            if(msg === "success") {
+                console.log(msg);
+            }else {
+                alert("复制文件失败！");
+            } 
+        });
+        // 复制粘贴文件夹
+        ipcRenderer.on("copyfolder-reply", (events, msg) => {
+            if(msg === "success") {
+                console.log(msg);
+            }else {
+                alert("复制文件夹失败！");
+            } 
+        });
     }
     nodeClickHandler(root, parent, el) {
         return (e) => {
@@ -827,7 +892,8 @@ class Directory {
                 text: "复制",
                 events: {
                     click: (root, parent, el) => {
-                        return () => {
+                        return (e) => {
+                            e.stopPropagation();
                             let nodeCopy = parent.parentNode;
                             // 先清空剪切板
                             Sys.nodePlate = undefined; 
@@ -844,7 +910,8 @@ class Directory {
                 text: "剪切",
                 events: {
                     click: (root, parent, el) => {
-                        return () => {
+                        return (e) => {
+                            e.stopPropagation();
                             parent.parentNode.style.opacity = '0.5';
                             let nodeCut = parent.parentNode;
                             Sys.nodePlate = undefined;
@@ -859,7 +926,8 @@ class Directory {
                 text: "删除",
                 events: {
                     click: (root, parent, el) => {
-                        return () => {
+                        return (e) => {
+                            e.stopPropagation();
                             let tmp = parent.parentNode.tmp;
                             if(parent.parentNode.layer > 1){
                                 let oChildren = parent.parentNode.parentNode.children;
@@ -876,7 +944,8 @@ class Directory {
                 text: "在资源管理器显示",
                 events: {
                     click: (root, parent, el) => {
-                        return () => {
+                        return (e) => {
+                            e.stopPropagation();
                             shell.showItemInFolder(parent.parentNode.title);
                         };
                     }
@@ -889,8 +958,103 @@ class Directory {
                 text: "新建",
                 events: {
                     click: (root, parent, el) => {
-                        return () => {
-                            let newNode = document.createElement('div');
+                        return (e) => {
+                            e.stopPropagation();
+                            let popup = new Popup();
+                            let popupNodes = [
+                                {
+                                    classNames: ['newfile-input-wrap'],
+                                    children: [
+                                        {
+                                            classNames: ['newfile-input-label'],
+                                            kind: 'label',
+                                            attrs: {
+                                                for: 'newfile-input'
+                                            },
+                                            text: '文件/文件夹名字'
+                                        },
+                                        {
+                                            classNames: ['newfile-input'],
+                                            kind: 'input',
+                                            attrs: {
+                                                id: 'newfile-input',
+                                                placeholder: 'example/example.txt'
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    classNames: ['newfile-select-wrap'],
+                                    children: [
+                                        {
+                                            classNames: ['newfile-select'],
+                                            kind: "input",
+                                            type: "radio",
+                                            attrs: {
+                                                id: 'newfile-select-file',
+                                                name: "newfile-select-radio"
+                                            }
+                                        },
+                                        {
+                                            classNames: ['newfile-select-label'],
+                                            kind: "label",
+                                            attrs: {
+                                                for: "newfile-select-file"
+                                            },
+                                            text: "文件"
+                                        },
+                                        {
+                                            classNames: ["newfile-select"],
+                                            kind: "input",
+                                            type: "radio",
+                                            attrs: {
+                                                id: "newfile-select-folder",
+                                                name: "newfile-select-radio"
+                                            }
+                                        },
+                                        {
+                                            classNames: ["newfile-select-label"],
+                                            kind: "label",
+                                            attrs: {
+                                                for: "newfile-select-file"
+                                            },
+                                            text: "文件夹"
+                                        }
+                                    ]
+                                }
+                            ];
+                            let nameInput;
+                            let fileRadio;
+                            let folderRadio;
+                            popup.createPopup(popupNodes, (popupRoot) => {
+                                nameInput = nameInput || popupRoot.querySelector('#newfile-input');
+                                fileRadio = fileRadio || popupRoot.querySelector("#newfile-select-file");
+                                folderRadio = folderRadio || popupRoot.querySelector('#newfile-select-folder');
+                                if(!nameInput.value) {
+                                    alert("文件名不能为空！");
+                                    return;
+                                }
+                                if(!fileRadio.checked && !folderRadio.checked) {
+                                    alert("没有选择创建类型！");
+                                    return;
+                                }
+                                let parentNode = parent.parentNode;
+                                let name = nameInput.value;
+                                let url = parentNode.title + '\\' + name;
+                                let kind = fileRadio.checked ? "file" : "folder";
+                                let layer = parentNode.layer + 1;
+                                let node = {
+                                    name,
+                                    url,
+                                    kind
+                                }; 
+                                let tmp = this.createTmp(layer, node);
+                                let element = new Element();
+                                element.createElement([tmp], parentNode, true);
+                                parent.remove();
+                                this.panel.refreshContentHeight();
+                                ipcRenderer.send("create" + kind + "-message", url);
+                            });
                         };
                     }
                 }
@@ -899,7 +1063,8 @@ class Directory {
                 text: "粘贴",
                 events: {
                     click: (root, parent, el) => {
-                        return () => {
+                        return (e) => {
+                            e.stopPropagation();
                             let nodePaste = Sys.nodePlate;
                             let plateStatus = Sys.nodePlateStatus;
                             let layer = parent.parentNode.layer+1;
@@ -922,6 +1087,7 @@ class Directory {
                                 nodePaste.parentNode.removeChild(nodePaste);
                                 parent.parentNode.appendChild(nodePaste);
                             }
+                            this.panel.refreshContentHeight();
                         }
                     }
                 }
@@ -945,28 +1111,65 @@ class Directory {
             }); 
         }); 
     }
-    dragstartHandler(root, parent, el) {
-        return (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            e.dataTransfer.setData("html", el);
-            e.dataTransfer.dropEffect = 'move';
-        };
-    }
-    dragOverHandler(root, parent, el) {
-        return (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        };
-    } 
     dragHandler(root, parent, el) {
         return (e) => {
             e.stopPropagation();
+            console.log('drag');
+        };
+    }
+    dragstartHandler(root, parent, el) {
+        return (e) => {
+            e.stopPropagation();
+            console.log(e.target);
+            console.log('dragstart');
+            // 保存拖动元素的引用(ref.)
+            this.dragged = e.target;
+            // 使其半透明
+            e.target.style.opacity = .5;
+        };
+    }
+    dragendHandler(root, parent, el) {
+        return (e) => {
+            e.stopPropagation();
+            e.target.style.opacity = "";
+        };
+    }
+    dragoverHandler(root, parent, el) {
+        return (e) => {
             e.preventDefault();
-            let data = e.dataTransfer.getData('html');
-            data.remove();
-            el.appendChild(data);
+            e.stopPropagation();
+            console.log('dragover');
+        };
+    } 
+    dragenterHandler(root, parent, el) {
+        return (e) => {
+            e.stopPropagation();
+            if(ClassList.has(e.target, 'folder-node')) {
+                e.target.style.backgroundColor = 'purple';
+            }
+        };
+    }
+    dragleaveHandler(root, parent, el) {
+        return (e) => {
+            e.stopPropagation();
+            if(ClassList.has(e.target, 'folder-node')) {
+                e.target.style.backgroundColor = '';
+            }
+        };
+    }
+    dropHandler(root, parent, el) {
+        return (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if(ClassList.has(e.target, 'folder-node')) {
+                let dragged = this.dragged;
+                if(!ClassList.has(dragged, 'node')){
+                    dragged = dragged.parentNode;
+                }
+                e.target.style.backgroundColor = '';
+                dragged.parentNode.removeChild( dragged );
+                e.target.appendChild( dragged );
+            }
         };
     }
     createTmp(layer, curNode, nodes) {
@@ -981,7 +1184,9 @@ class Directory {
             ],
             events: {
                 click: this.nodeClickHandler.bind(this),
-                dragstart: this.dragstartHandler.bind(this)
+                drag: this.dragHandler.bind(this),
+                dragstart: this.dragstartHandler.bind(this),
+                dragend: this.dragendHandler.bind(this),
             },
             fun: (el) => {
                 this.createContextMenu(el, nodeKind);
@@ -992,7 +1197,6 @@ class Directory {
                 name, 
                 tmp: curNode,
                 layer,
-                draggable: true 
             },
             children: [
                 {
@@ -1018,7 +1222,7 @@ class Directory {
                 }
             ]
         };
-        if(nodes){
+        if(nodeKind === 'folder'){
             // push drop btn
             tmp.children.push({
                 classNames: [
@@ -1032,11 +1236,16 @@ class Directory {
                     click: this.toggleFolder.bind(this)
                 }
             });
-            nodes.forEach((item) => {
-                tmp.children.push(item);
-            });
-            tmp.events.drag = this.dragHandler.bind(this);
-            tmp.events.dragover = this.dragOverHandler.bind(this);
+            if(nodes){
+                nodes.forEach((item) => {
+                    tmp.children.push(item);
+                });
+            }
+            tmp.attrs.draggable =  true 
+            tmp.events.dragover = this.dragoverHandler.bind(this);
+            tmp.events.dragenter = this.dragenterHandler.bind(this);
+            tmp.events.dragleave = this.dragleaveHandler.bind(this);
+            tmp.events.drop = this.dropHandler.bind(this);
         }else{
             tmp.events.dblclick = (root, parent, el) => {
                 return () => {
