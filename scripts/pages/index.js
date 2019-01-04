@@ -1,5 +1,6 @@
 const { ipcRenderer, shell, dialog } = require('electron');
 const fs = require('fs');
+const pathModule = require("path");
 /**
  *  @name ClassList
  *  @description class类名操作对象 
@@ -803,7 +804,7 @@ class Directory {
             } 
         });
          // 删除文件夹
-         ipcRenderer.on("deletefile-reply", (events, msg) => {
+         ipcRenderer.on("deletefolder-reply", (events, msg) => {
             if(msg === "success") {
                 console.log(msg);
             }else {
@@ -933,8 +934,10 @@ class Directory {
                                 let oChildren = parent.parentNode.parentNode.children;
                                 oChildren.splice(oChildren.indexOf(tmp), 1);
                             }
-                            
+                            let kind = ClassList.has(parent.parentNode, "folder-node") ? "folder" : "file";
+                            let url = parent.parentNode.title;
                             parent.parentNode.remove();
+                            ipcRenderer.send("delete" + kind, url);
                         } 
                     }
                 }
@@ -1068,15 +1071,20 @@ class Directory {
                             let nodePaste = Sys.nodePlate;
                             let plateStatus = Sys.nodePlateStatus;
                             let layer = parent.parentNode.layer+1;
+                            let kind = "folder";
                             if(plateStatus === 'copy'){
                                 let tmpCopy = JSON.parse(JSON.stringify(nodePaste.tmp));
                                 let dChildren = parent.parentNode.tmp.children;
                                 dChildren.push(tmpCopy);
                                 if(!(tmpCopy instanceof Array)) {
                                     tmpCopy = [tmpCopy];
+                                    kind = "file";
                                 }
                                 let nodes = this.createNodes(tmpCopy, layer);
                                 (new Element()).createElement(nodes, parent.parentNode, true);
+                                let src = nodePaste.title;
+                                let dst = pathModule.join(parent.parentNode.title, nodePaste.name);
+                                ipcRenderer.send("copy" + kind, src, dst);
                             }else if(plateStatus === 'cut'){
                                 let oChildren = nodePaste.parentNode.tmp.children;
                                 oChildren.splice(oChildren.indexOf(nodePaste.tmp), 1);
@@ -1086,6 +1094,10 @@ class Directory {
                                 nodePaste.style.opacity = '1.0';
                                 nodePaste.parentNode.removeChild(nodePaste);
                                 parent.parentNode.appendChild(nodePaste);
+                                let src = nodePaste.title;
+                                let dst = pathModule.join(parent.parentNode.title, nodePaste.name);
+                                let kind = ClassList.has(nodePaste, 'folder-node') ? 'folder' : 'file';
+                                ipcRenderer.send("move" + kind, src, dst);
                             }
                             this.panel.refreshContentHeight();
                         }

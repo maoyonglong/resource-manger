@@ -1,24 +1,31 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { initMenu } = require("./menu");
 const { loadShortCutsConfig } = require("./shortcut");
-const { openDirectoryDialog, openFileDialog, openSaveDialog, saveOutputs, createFile, createDirectory } = require("./file");
+const { 
+  openDirectoryDialog, 
+  openFileDialog,
+  openSaveDialog,
+  saveOutputs,
+  createFile, 
+  createDirectory,
+  deleteFile,
+  deleteFolder,
+  moveFile,
+  moveFolder,
+  copyFile,
+  copyFolder
+} = require("./file");
 
 let win;
 
 function createWindow () {
-
   win = new BrowserWindow({ width: 800, height: 600, minWidth: 500, minHeight: 500 });
-
   global.win = win;
-
   win.loadFile('./pages/index.html');
-
   win.webContents.openDevTools();
-
   win.on('closed', () => {
     win = null
   });
-
 }
 
 ipcMain.on("searchArea-message", (event) => {
@@ -50,6 +57,54 @@ ipcMain.on("createfolder-message", (event, url) => {
   }).catch(() => {
     event.sender.send("createfolder-reply", "fail");
   }); 
+});
+
+ipcMain.on("deletefile-message", (event, path) => {
+  deleteFile(path).then(() => {
+    event.sender.send("deletefile-reply", "success");
+  }).catch(() => {
+    event.sender.send("createfolder-reply", "fail");
+  });
+});
+
+ipcMain.on("deletefolder-message", (event, path) => {
+  deleteFolder(path).then(() => {
+    event.sender.send("deletefolder-reply", "success");
+  }).catch(() => {
+    event.sender.send("deletefolder-reply", "fail");
+  });
+});
+
+ipcMain.on("movefile-message", (event, src, dst) => {
+  moveFile(src, dst).then(() => {
+    event.sender.send("movefile-reply", "success");
+  }).catch(() => {
+    event.sender.send("movefile-reply", "fail");
+  });
+});
+
+ipcMain.on("movefolder-message", (event, src, dst) => {
+  moveFolder(src, dst).then(() => {
+    event.sender.send("movefolder-reply", "success");
+  }).catch(() => {
+    event.sender.send("movefolder-reply", "fail");
+  });
+});
+
+ipcMain.on("copyfile-message", (event, msg) => {
+  copyFile(src, dst).then(() => {
+    event.sender.send("copyfile-reply", "success");
+  }).catch(() => {
+    event.sender.send("copyfile-reply", "fail");
+  });
+});
+
+ipcMain.on("copyfolder-message", (event, msg) => {
+  copyFolder(src, dst).then(() => {
+    event.sender.send("copyfolder-reply", "success");
+  }).catch(() => {
+    event.sender.send("copyfolder-reply", "fail");
+  });
 });
 
 app.on('ready', () => {
