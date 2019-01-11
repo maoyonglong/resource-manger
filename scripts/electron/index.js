@@ -15,9 +15,7 @@ const {
   copyFile,
   copyFolder
 } = require("./file");
-
 let win;
-
 function createWindow () {
   win = new BrowserWindow({ width: 800, height: 600, minWidth: 500, minHeight: 500 });
   global.win = win;
@@ -27,13 +25,11 @@ function createWindow () {
     win = null
   });
 }
-
 ipcMain.on("searchArea-message", (event) => {
   openDirectoryDialog().then((paths) => {
     event.sender.send("searchArea-reply", paths);
   });
 });
-
 ipcMain.on("output-message", (event, outputs) => {
   openSaveDialog().then((path) => {
     if(typeof path === 'string' && path){
@@ -42,7 +38,6 @@ ipcMain.on("output-message", (event, outputs) => {
     event.sender.send("output-reply", path);
   });
 });
-
 ipcMain.on("createfile-message", (event, url) => {
   createFile(url).then(() => {
     event.sender.send("createfile-reply", "success");
@@ -50,7 +45,6 @@ ipcMain.on("createfile-message", (event, url) => {
     event.sender.send("createfile-reply", "fail");
   });
 });
-
 ipcMain.on("createfolder-message", (event, url) => {
   createDirectory(url).then(() => {
     event.sender.send("createfolder-reply", "success");
@@ -58,15 +52,15 @@ ipcMain.on("createfolder-message", (event, url) => {
     event.sender.send("createfolder-reply", "fail");
   }); 
 });
-
 ipcMain.on("deletefile-message", (event, path) => {
+  console.log(path)
   deleteFile(path).then(() => {
+    console.log(1)
     event.sender.send("deletefile-reply", "success");
   }).catch(() => {
     event.sender.send("createfolder-reply", "fail");
   });
 });
-
 ipcMain.on("deletefolder-message", (event, path) => {
   deleteFolder(path).then(() => {
     event.sender.send("deletefolder-reply", "success");
@@ -82,7 +76,6 @@ ipcMain.on("movefile-message", (event, src, dst) => {
     event.sender.send("movefile-reply", "fail");
   });
 });
-
 ipcMain.on("movefolder-message", (event, src, dst) => {
   moveFolder(src, dst).then(() => {
     event.sender.send("movefolder-reply", "success");
@@ -90,23 +83,20 @@ ipcMain.on("movefolder-message", (event, src, dst) => {
     event.sender.send("movefolder-reply", "fail");
   });
 });
-
-ipcMain.on("copyfile-message", (event, msg) => {
+ipcMain.on("copyfile-message", (event, src, dst) => {
   copyFile(src, dst).then(() => {
     event.sender.send("copyfile-reply", "success");
   }).catch(() => {
     event.sender.send("copyfile-reply", "fail");
   });
 });
-
-ipcMain.on("copyfolder-message", (event, msg) => {
+ipcMain.on("copyfolder-message", (event, src, dst) => {
   copyFolder(src, dst).then(() => {
     event.sender.send("copyfolder-reply", "success");
   }).catch(() => {
     event.sender.send("copyfolder-reply", "fail");
   });
 });
-
 app.on('ready', () => {
   // open the window
   createWindow();
@@ -115,19 +105,13 @@ app.on('ready', () => {
   // init the shortcut
   loadShortCutsConfig();
 });
-
 app.on('window-all-closed', () => {
-
   if (process.platform !== 'darwin') {
     app.quit()
   }
-
 });
-
 app.on('activate', () => {
-
   if (win === null) {
     createWindow()
   }
-
 });

@@ -1,5 +1,4 @@
 const { globalShortcut } = require("electron");
-
 class ShortCuts {
     constructor() {
         this.shortCuts = null;
@@ -18,13 +17,10 @@ class ShortCuts {
         }
     }
 }
-
 const shortCut = new ShortCuts();
-
 function loadShortCutsConfig() {
     shortCut.loadShortCutsConfig();
 }
-
 module.exports = {
     loadShortCutsConfig
 };

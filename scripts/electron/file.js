@@ -1,7 +1,6 @@
 const { dialog } = require("electron");
 const pathMoudle = require("path");
 const fs = require("fs");
-
 function openFileDialog(){
     return new Promise((resolve, reject) => {
         dialog.showOpenDialog(global.win, {
@@ -11,7 +10,6 @@ function openFileDialog(){
         });
     });
 }
-
 function openDirectoryDialog(){
     return new Promise((resolve, reject) => {
         dialog.showOpenDialog(global.win, {
@@ -21,7 +19,6 @@ function openDirectoryDialog(){
         });
     });
 }
-
 function openSaveDialog() {
     return new Promise((reslove, reject) => {
         dialog.showSaveDialog(global.win, {
@@ -31,7 +28,6 @@ function openSaveDialog() {
         });
     });
 }
-
 function saveOutputs(path, outputs) {
     let opPromise = new Promise((reslove, reject) => {
         createDirectory(path).then(() => {
@@ -44,14 +40,13 @@ function saveOutputs(path, outputs) {
     });
     return opPromise;
 }
-
 function saveFiles(path, outputs) {
     return new Promise((reslove, reject) => {
         let promises = [];
         for(let i = 0; i < outputs.length; i++){ 
             promises.push(new Promise((reslove, reject) => {
                 let output = outputs[i];
-                let dstPath = pathModlue.join(path, output.name);
+                let dstPath = pathMoudle.join(path, output.name);
                 let srcPath = output.url;
                 // 假设是文件夹
                 if(output.children !== undefined) {
@@ -73,7 +68,6 @@ function saveFiles(path, outputs) {
         });
     });
 }
-
 function createFile(path) {
     let opPromise = new Promise((reslove, reject) => {
         fs.writeFile(path, "", (err) => {
@@ -85,7 +79,6 @@ function createFile(path) {
     });
     return opPromise;
 }
-
 function createDirectory(path) {
     let opPromise = new Promise((reslove, reject) => {
         fs.exists(path, (exists) => {
@@ -103,21 +96,42 @@ function createDirectory(path) {
     });
     return opPromise;
 }
-
 function copyFile(src, dst) {
-    let opPromise = new Promise((reslove, reject) => {
-        try{
-            let readStream = fs.createReadStream(src);
-            let writeStream = fs.createWriteStream(dst);
-            readStream.pipe(writeStream);
-            reslove();
-        }catch(err){
-            reject(err);
-        }
+    let readStream = fs.createReadStream(src);
+    let writeStream = fs.createWriteStream(dst);
+    readStream.pipe(writeStream);
+    let promise1 = new Promise((reslove) => {
+        readStream.on("error", () => {
+            reslove(false);
+        });
     });
-    return opPromise;
+    let promise2 = new Promise((reslove) => {
+        readStream.on("finish", () => {
+            reslove(true);
+        });
+    });
+    let promise3 = new Promise((reslove) => {
+        writeStream.on("error", () => {
+            reslove(false);
+        });
+    });
+    let promise4 = new Promise((reslove) => {
+        writeStream.on("finish", () => {
+            reslove(true);
+        });
+    });
+    let allPromise = Promise.all([promise1, promise2, promise3, promise4]);
+    return new Promise((reslove, reject) => {
+        allPromise.then((args) => {
+            let hasError = args.indexOf(true);
+            if(hasError >= 0) {
+                reject();
+            }else {
+                reslove();
+            }
+        }); 
+    });
 }
-
 function readDir(path) {
     return new Promise((reslove, reject) => {
         fs.readdir(path, (err, files) => {
@@ -126,7 +140,6 @@ function readDir(path) {
         });
     });
 }
-
 function stat(path) {
     return new Promise((reslove, reject) => {
         fs.stat(path, (err, stats) => {
@@ -135,7 +148,6 @@ function stat(path) {
         });
     });
 }
-
 function deleteFolder(path) {
     return new Promise((reslove, reject) => {
         let promises = [];
@@ -166,6 +178,9 @@ function deleteFolder(path) {
                 });
                 let allFilePromise = Promise.all(promises);
                 allFilePromise.then(() => {
+                    fs.rmdir(path, (err) => {
+                        if(err) reject();
+                    });
                     reslove();
                 }).catch(() => {
                     reject();
@@ -178,7 +193,6 @@ function deleteFolder(path) {
         }
     });    
 }
-
 function deleteFile(path) {
     return new Promise((reslove, reject) => {
         fs.unlink(path, (err) => {
@@ -187,7 +201,6 @@ function deleteFile(path) {
         });
     });  
 }
-
 function asyncPathExists(path) {
     return new Promise((reslove, reject) => {
         fs.exists(src, (exists) => {
@@ -199,7 +212,6 @@ function asyncPathExists(path) {
         });
     });
 }
-
 function copyFolder(src, dst) {
     return new Promise((reslove, reject) => {
         let promises = [];
@@ -249,7 +261,6 @@ function copyFolder(src, dst) {
         });
     });
 }
-
 function moveFolder(src, dst) {
     return new Promise((reslove, reject) => {
         copyFolder(src, dst).then(() => {
@@ -260,7 +271,6 @@ function moveFolder(src, dst) {
         });
     });
 }
-
 function moveFile(src, dst) {
     return new Promise((reslove, reject) => {
         copyFile(src, dst).then(() => {
@@ -271,7 +281,6 @@ function moveFile(src, dst) {
         });
     });
 }
-
 module.exports = {
     openFileDialog,
     openDirectoryDialog,

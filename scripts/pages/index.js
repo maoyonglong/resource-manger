@@ -167,6 +167,29 @@ class Element {
         }
         return children;
     }
+    /**
+     * 
+     */
+    static getStyle(el) {
+        let style = el.currentStyle || getComputedStyle(el);
+        return style;
+    }
+    static addInnerStyle(code) {
+        var style = document.createElement('style');
+        style.type = 'text/css';
+        try{    
+            style.appendChild(document.createTextNode(code));
+        }catch(e){
+            style.cssText = code; // ie,原因与script一样
+        }
+        var head = document.getElementsByTagName('head')[0];
+        head.appendChild(style);
+        return style;
+    }
+    static replaceInnerStyleTag(tag, code) {
+        tag.parentNode.removeChild(tag);
+        return Element.addInnerStyle(code);
+    }
 };
 /** 
  * @name Sys
@@ -244,7 +267,7 @@ class Panel {
         for(let i = 0; i < panels.length; i++){
             const panel = new Panel(panels[i]);
             panel.initEvent();
-            panel.refreshContentHeight();
+            // panel.refreshContentHeight();
         }
     }
     /**
@@ -281,7 +304,6 @@ class Panel {
      * @description 设置或刷新content高度
      */
     refreshContentHeight() {
-        console.log(1)
         this.content.style.height = "auto";
         let clientHeight = this.content.clientHeight;
         let maxHeight = document.body.clientHeight - this.content.offsetTop;
@@ -356,9 +378,12 @@ class Tab{
  */
 class Popup {
     /**
-     * 
-     * @param {*} contentNodes 
-     * @param {*} callback 
+     * @method createTmp
+     * @for Popup
+     * @description 创建dom
+     * @param { Array } contentNodes dom结点的json表示
+     * @param { Function } callback 回调函数
+     * @param { HTMLElement } dom结点
      */
     createTmp(contentNodes, callback) {
         let nodes = [
@@ -422,6 +447,15 @@ class Popup {
         ];
         return (new Element()).createElement(nodes);
     }
+    /**
+     * @method focus
+     * @for Popup
+     * @description 聚焦提示
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */
     focus(root, parent, el) {
         let popup;
         return () => {
@@ -434,12 +468,28 @@ class Popup {
             }, 900);
         }
     }
+    /**
+     * @method cancel
+     * @for Popup
+     * @description 弹窗取消按钮事件
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点 
+     * @return { function }
+     */
     cancel(root, parent, el) {
         return (e) => {
             e.stopPropagation();
             document.body.removeChild(root);
         } 
     }
+    /**
+     * @method yes
+     * @method 
+     * @for Popup
+     * @description 点击确定按钮后执行的回调函数
+     * @param { function } callback 
+     */
     yes(callback) {
         return (root, parent, el) => {
             return (e) => {
@@ -450,12 +500,24 @@ class Popup {
             }
         }
     }
+    /**
+     * @method createPopup
+     * @method 
+     * @for Popup
+     * @description 创建弹窗
+     * @param { Array } nodes 弹窗的内容模板 
+     * @param { function } callback 回调函数
+     */
     createPopup(nodes, callback) {
         const root = this.createTmp(nodes, callback);
         document.body.appendChild(root);
     }
 }
-// 文件格式化类
+/**
+ * @class FileParser
+ * @description 文件格式化类
+ * @constructor { function(args) => void }   
+ */
 class FileParser {
     constructor(args = {}) {
         this.searchArgs = {
@@ -466,21 +528,74 @@ class FileParser {
             query: args.query
         }
     }
+    /**
+     * @method getFileDirectory
+     * @for FileParser
+     * @description 获取目录名
+     * @param { string } path 完整路径
+     * @return { string } 
+     */
     getFileDirectory(path) {
         path = path.substring(0, path.lastIndexOf('\\')+1);
         return path;
     }
+    /**
+     * @method getFileName
+     * @for FileParser
+     * @description 获取文件名
+     * @param { string } path 完整路径
+     * @return { string } 
+     */
     getFileName(path) {
         let arr = path.split(/[/\\]/);
         return arr[arr.length-1];
     }
+    /**
+     * @method getFileNameWithoutExtensions
+     * @for FileParser
+     * @description 获取文件名（除去扩展名）
+     * @param { string } fileName 文件名
+     * @return { string }
+     */
     getFileNameWithoutExtensions(fileName) {
-        return fileName.substring(0, fileName.lastIndexOf('.'));
+        let idx = fileName.lastIndexOf('.');
+        console.log(idx)
+        if(idx >= 0){
+            return fileName.substring(0, idx);
+        }else {
+            return fileName;
+        }
     }
+    /**
+     * @method testStringIgnore
+     * @for FileParser
+     * @description 忽略大小写测试字符串是否匹配
+     * @param { string } 待匹配字符串
+     * @param { string } 匹配字符串
+     * @return { boolean }
+     */
+    testStringIgnore(str, query) {
+        let re = new RegExp(query, "i");
+        return re.test(str);
+    }
+    /**
+     * @method getFileExtension
+     * @for FileParser
+     * @description 获取文件扩展名
+     * @param { string } path 
+     * @return { string }
+     */
     getFileExtension(path) {
         let arr = path.split('.');
         return arr[arr.length-1];
     }
+    /**
+     * @method getFileList
+     * @for FileParser
+     * @description 获取文件夹目录所有文件的文件路径
+     * @param { string } dir 
+     * @return { Promise }
+     */
     getFileList(dir) {
         return new Promise((reslove, reject) => {
             fs.readdir(dir, (err, files) => {
@@ -489,6 +604,13 @@ class FileParser {
             });
         });
     }
+    /**
+     * @method pathToStats
+     * @for FileParser
+     * @description 将文件路径转成Stats
+     * @param { string } path 
+     * @return { Promise }
+     */
     pathToStats(path) {
         return new Promise((reslove, reject) => {
             fs.stat(path, (err, stats) => {
@@ -497,6 +619,13 @@ class FileParser {
             });
         });
     }
+    /**
+     * @method parseToNodes
+     * @for FileParser
+     * @description 生成文件目录树
+     * @param { Array } filePaths 文件路径
+     * @param { HTMLElement } node 父结点
+     */
     parseToNodes(filePaths, node) {
         try{
             let promises = [];
@@ -512,16 +641,45 @@ class FileParser {
                                 paths.forEach((item, idx, arr) => {
                                     arr[idx] = curFilePath + '\\' + item;
                                 });
-                                let folder = {
-                                    name: fileName,
-                                    kind: 'folder',
-                                    url: curFilePath,
-                                    children: []
+                                // 筛选
+                                let searchArgs = this.searchArgs;
+                                if(!searchArgs.isSearch) {
+                                    let folder = {
+                                        name: fileName,
+                                        kind: 'folder',
+                                        url: curFilePath,
+                                        children: []
+                                    }
+                                    node.push(folder);
+                                    this.parseToNodes(paths, folder.children).then(() => {
+                                        reslove();
+                                    });
+                                }else {
+                                    let flag = true;
+                                    let query = searchArgs.query;
+                                    // 如果筛选文件夹名
+                                    let puleQuery = this.getFileNameWithoutExtensions(query);
+                                    console.log(puleQuery, puleQuery)
+                                    if(searchArgs.fileName &&  !this.testStringIgnore(fileName, puleQuery)){
+                                        flag = false;
+                                    }
+                                    if(flag) {
+                                        let folder = {
+                                            name: fileName,
+                                            kind: 'folder',
+                                            url: curFilePath,
+                                            children: []
+                                        }
+                                        node.push(folder);
+                                        this.parseToNodes(paths, folder.children).then(() => {
+                                            reslove();
+                                        });
+                                    }else {
+                                        this.parseToNodes(paths, node).then(() => {
+                                            reslove();
+                                        });
+                                    }
                                 }
-                                node.push(folder);
-                                this.parseToNodes(paths, folder.children).then(() => {
-                                    reslove();
-                                });
                             });
                         }else {
                             let searchArgs = this.searchArgs;
@@ -545,8 +703,8 @@ class FileParser {
                                         flag = false;
                                     }
                                     // 如果筛选文件名
-                                    if(searchArgs.fileName && fileName.indexOf(this.getFileNameWithoutExtensions(query)) < 0){
-                                        console.log(2)
+                                    let puleQuery = this.getFileNameWithoutExtensions(query);
+                                    if(searchArgs.fileName &&  !this.testStringIgnore(fileName, puleQuery)){
                                         flag = false;
                                     }
                                     // 如果筛选文件内容
@@ -586,6 +744,14 @@ class FileParser {
             throw err;
         }      
     }
+    /**
+     * @method FileHasContent
+     * @for FileParser
+     * @description 判断文件是否含有某字符内容
+     * @param { string } path 
+     * @param { string } content 
+     * @return { Promise }
+     */
     FileHasContent(path, content) {
         return new Promise((reslove, reject) => {
             this.readFile(path).then((data) => {
@@ -594,6 +760,13 @@ class FileParser {
             });
         });
     }
+    /**
+     * @method readFile
+     * @for FileParser
+     * @description 读文件
+     * @param { string } path 
+     * @return { Promise }
+     */
     readFile(path) {
         return new Promise((reslove, reject) => {
             fs.readFile(path, (err, data) => {
@@ -605,13 +778,22 @@ class FileParser {
         }); 
     }
 }
-// 搜索类
+/**
+ * @class Search
+ * @description 搜索类
+ * @constructor { function() => void }
+ */
 class Search {
     constructor() {
         this.searchInput = document.querySelector("#search");
         this.searchSet = document.querySelector("#search-set");
         this.searchStart = document.querySelector("#search-start");
     }
+    /**
+     * @method initEvent
+     * @for Search
+     * @description 初始化事件
+     */
     initEvent() {
         let searchSet = this.searchSet;
         let searchStart = this.searchStart;
@@ -625,6 +807,11 @@ class Search {
             this.searchArea = paths;
         });
     }
+    /**
+     * @method openSearchConfigPopup
+     * @for Search
+     * @description 打开搜索设置弹窗
+     */
     openSearchConfigPopup() {
         let nodes = [
             {
@@ -733,11 +920,22 @@ class Search {
             }
         });
     }
+    /**
+     * @method setSearchArea
+     * @for Search
+     * @description 设置搜索区域
+     * @return { function }
+     */
     setSearchArea() {
         return () => {
             ipcRenderer.send("searchArea-message");
         }
     }
+    /**
+     * @method startSearch
+     * @for Search
+     * @description 开始搜索
+     */
     startSearch() {
         // rule
         let searchArea = this.searchArea;
@@ -758,27 +956,49 @@ class Search {
             query
         });
         let nodesPromise = fileParser.parseToNodes(searchArea, nodes);
-        nodesPromise.then(() => {
-            let directory = new Directory();
-            directory.init(nodes);
+        nodesPromise.then((flag) => {
+            if(flag) {
+                let directory = new Directory();
+                directory.init(nodes);
+            }else {
+                alert("没有找到匹配的文件或文件夹");
+            } 
         });
     }
 }
-// 目录类
+/**
+ * @class Directory
+ * @description 目录类
+ * @constructor { function() => void }
+ */  
 class Directory {
     constructor() {
         this.directoryPanel = document.querySelector(".directory-panel");
         this.panel = this.directoryPanel.panel;
         this.directoryContent = this.panel.content;
     }
+    /**
+     * @method init
+     * @for Directory
+     * @description 初始化目录树
+     * @param { Array } nodes 结点模板
+     */
     init(nodes) {
         let root = {
             classNames: ["directory-tree"]
         };
+        window.layer = 0;
         nodes = this.createNodes(nodes, 1);
+        let nodeWidth = 299 + window.layer * 20
+        window.nodeInnerStyle = Element.addInnerStyle(`
+            .directory-tree .node {
+                width: ${ nodeWidth }px;
+            }
+        `);
+        document.querySelector(".container-left").style.flexBasis = nodeWidth + "px";
         let el = (new Element()).createElement(nodes, root);
         this.directoryContent.appendChild(el);
-        this.panel.refreshContentHeight();
+        // this.panel.refreshContentHeight();
         // 创建文件
         ipcRenderer.on("createfile-reply", (event, msg) => {
             if(msg === "success") {
@@ -844,6 +1064,15 @@ class Directory {
             } 
         });
     }
+    /**
+     * @method nodeClickHandler
+     * @for Directory
+     * @description 目录树结点点击事件函数
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */
     nodeClickHandler(root, parent, el) {
         return (e) => {
             e.stopPropagation();
@@ -855,6 +1084,15 @@ class Directory {
             ClassList.add(el, "active");
         }
     }
+    /**
+     * @method toggleFolder
+     * @for Directory
+     * @description 文件夹结点的折叠和展开
+     * @param { HTMLElement } root 
+     * @param { HTMLElement } parent 
+     * @param { HTMLElement } el 
+     * @return { function }
+     */
     toggleFolder(root, parent, el) {
         let state = 0;
         let stateArr = [
@@ -872,11 +1110,22 @@ class Directory {
                 item.style.display = stateArr[state];
             });
             el.innerHTML = dropIcon[state];
-            this.panel.refreshContentHeight();
+            // this.panel.refreshContentHeight();
         };
     }
+    /**
+     * @method createNodes
+     * @for Directory
+     * @description 创建结点模板
+     * @param { Array } nodes 目录模板
+     * @param { Number } layer 层数
+     * @return { Array } 
+     */
     createNodes(nodes, layer) {
         let arr = [];
+        if(window.layer < layer) {
+            window.layer = layer;
+        }
         for(let i = 0; i < nodes.length; i++){
             let curNode = nodes[i];
             let node = this.createTmp(layer, curNode, 
@@ -885,6 +1134,13 @@ class Directory {
         }
         return arr;
     }
+    /**
+     * @method createContextMenu
+     * @for Directory
+     * @description 创建右键菜单
+     * @param { HTMLElement } el 当前结点
+     * @param { string } nodeKind 结点类型
+     */
     createContextMenu(el, nodeKind) {
         let directoryContent = this.directoryContent;
         let contextMenu = [
@@ -894,7 +1150,6 @@ class Directory {
                 events: {
                     click: (root, parent, el) => {
                         return (e) => {
-                            e.stopPropagation();
                             let nodeCopy = parent.parentNode;
                             // 先清空剪切板
                             Sys.nodePlate = undefined; 
@@ -912,7 +1167,6 @@ class Directory {
                 events: {
                     click: (root, parent, el) => {
                         return (e) => {
-                            e.stopPropagation();
                             parent.parentNode.style.opacity = '0.5';
                             let nodeCut = parent.parentNode;
                             Sys.nodePlate = undefined;
@@ -928,16 +1182,16 @@ class Directory {
                 events: {
                     click: (root, parent, el) => {
                         return (e) => {
-                            e.stopPropagation();
                             let tmp = parent.parentNode.tmp;
                             if(parent.parentNode.layer > 1){
                                 let oChildren = parent.parentNode.parentNode.children;
+                                oChildren = [].slice(oChildren);
                                 oChildren.splice(oChildren.indexOf(tmp), 1);
                             }
                             let kind = ClassList.has(parent.parentNode, "folder-node") ? "folder" : "file";
                             let url = parent.parentNode.title;
                             parent.parentNode.remove();
-                            ipcRenderer.send("delete" + kind, url);
+                            ipcRenderer.send("delete" + kind + "-message", url);
                         } 
                     }
                 }
@@ -962,7 +1216,6 @@ class Directory {
                 events: {
                     click: (root, parent, el) => {
                         return (e) => {
-                            e.stopPropagation();
                             let popup = new Popup();
                             let popupNodes = [
                                 {
@@ -1029,6 +1282,7 @@ class Directory {
                             let nameInput;
                             let fileRadio;
                             let folderRadio;
+                            let parentNode = parent.parentNode;
                             popup.createPopup(popupNodes, (popupRoot) => {
                                 nameInput = nameInput || popupRoot.querySelector('#newfile-input');
                                 fileRadio = fileRadio || popupRoot.querySelector("#newfile-select-file");
@@ -1041,7 +1295,6 @@ class Directory {
                                     alert("没有选择创建类型！");
                                     return;
                                 }
-                                let parentNode = parent.parentNode;
                                 let name = nameInput.value;
                                 let url = parentNode.title + '\\' + name;
                                 let kind = fileRadio.checked ? "file" : "folder";
@@ -1049,13 +1302,22 @@ class Directory {
                                 let node = {
                                     name,
                                     url,
-                                    kind
+                                    kind,
+                                    children: []
                                 }; 
                                 let tmp = this.createTmp(layer, node);
+                                if(layer > window.layer) {
+                                    window.layer = layer;
+                                    window.nodeInnerStyle = Element.addInnerStyle(`
+                                        .directory-tree .node {
+                                            width: ${ 299 + window.layer * 20 }px;
+                                        }
+                                    `);
+                                }
                                 let element = new Element();
                                 element.createElement([tmp], parentNode, true);
                                 parent.remove();
-                                this.panel.refreshContentHeight();
+                                // this.panel.refreshContentHeight();
                                 ipcRenderer.send("create" + kind + "-message", url);
                             });
                         };
@@ -1067,7 +1329,6 @@ class Directory {
                 events: {
                     click: (root, parent, el) => {
                         return (e) => {
-                            e.stopPropagation();
                             let nodePaste = Sys.nodePlate;
                             let plateStatus = Sys.nodePlateStatus;
                             let layer = parent.parentNode.layer+1;
@@ -1084,10 +1345,14 @@ class Directory {
                                 (new Element()).createElement(nodes, parent.parentNode, true);
                                 let src = nodePaste.title;
                                 let dst = pathModule.join(parent.parentNode.title, nodePaste.name);
-                                ipcRenderer.send("copy" + kind, src, dst);
+                                if(src === dst) {
+                                    dst = dst + (new Date());
+                                }
+                                ipcRenderer.send("copy" + kind + "-message", src, dst);
                             }else if(plateStatus === 'cut'){
                                 let oChildren = nodePaste.parentNode.tmp.children;
                                 oChildren.splice(oChildren.indexOf(nodePaste.tmp), 1);
+                                console.log(oChildren);
                                 let dChildren = parent.parentNode.tmp.children;
                                 dChildren.push(nodePaste.tmp);
                                 nodePaste.style.textIndent = layer * 20 + 'px';
@@ -1096,10 +1361,21 @@ class Directory {
                                 parent.parentNode.appendChild(nodePaste);
                                 let src = nodePaste.title;
                                 let dst = pathModule.join(parent.parentNode.title, nodePaste.name);
+                                if(src === dst) {
+                                    dst = dst + (new Date());
+                                }
                                 let kind = ClassList.has(nodePaste, 'folder-node') ? 'folder' : 'file';
-                                ipcRenderer.send("move" + kind, src, dst);
+                                ipcRenderer.send("move" + kind + "-message", src, dst);
                             }
-                            this.panel.refreshContentHeight();
+                            // this.panel.refreshContentHeight();
+                            if(layer > window.layer) {
+                                window.layer = layer;
+                                window.nodeInnerStyle = Element.addInnerStyle(`
+                                    .directory-tree .node {
+                                        width: ${ 299 + window.layer * 20 }px;
+                                    }
+                                `);
+                            }
                         }
                     }
                 }
@@ -1123,36 +1399,77 @@ class Directory {
             }); 
         }); 
     }
+    /**
+     * @method drag
+     * @for Directory
+     * @description 拖拽事件监听
+     * @param { HTMLElement  } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */
     dragHandler(root, parent, el) {
         return (e) => {
             e.stopPropagation();
-            console.log('drag');
         };
     }
-    dragstartHandler(root, parent, el) {
+    /**
+     * @method dragstartHandler
+     * @for Directory
+     * @description 结点拖拽开始事件监听
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */   
+    dragstartHandler(rootparent, el) {
         return (e) => {
             e.stopPropagation();
-            console.log(e.target);
-            console.log('dragstart');
             // 保存拖动元素的引用(ref.)
-            this.dragged = e.target;
+            Sys.dragged = e.target;
             // 使其半透明
             e.target.style.opacity = .5;
         };
     }
-    dragendHandler(root, parent, el) {
+    /**
+     * @method dragendHandler
+     * @for Directory
+     * @description 拖拽结束事件监听
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */   
+    dragendHandler(root, rent, el) {
         return (e) => {
             e.stopPropagation();
             e.target.style.opacity = "";
         };
     }
+    /**
+     * @method dragoverHandler
+     * @for Directory
+     * @description 拖拽覆盖事件监听
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */
     dragoverHandler(root, parent, el) {
         return (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('dragover');
         };
     } 
+    /**
+     * @method dragenterHandler
+     * @for Directory
+     * @description 拖拽进入可放置结点的事件监听
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */
     dragenterHandler(root, parent, el) {
         return (e) => {
             e.stopPropagation();
@@ -1161,6 +1478,15 @@ class Directory {
             }
         };
     }
+    /**
+     * @method dragleaveHandler
+     * @for Directory
+     * @description 拖拽离开可放置结点的事件监听
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */
     dragleaveHandler(root, parent, el) {
         return (e) => {
             e.stopPropagation();
@@ -1169,21 +1495,58 @@ class Directory {
             }
         };
     }
+    /**
+     * @method dropHandler
+     * @for Directory
+     * @description 拖拽放置的事件监听
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }m
+     */    
     dropHandler(root, parent, el) {
         return (e) => {
             e.preventDefault();
             e.stopPropagation();
             if(ClassList.has(e.target, 'folder-node')) {
-                let dragged = this.dragged;
+                let dragged = Sys.dragged;
+                console.log(dragged)
                 if(!ClassList.has(dragged, 'node')){
                     dragged = dragged.parentNode;
                 }
                 e.target.style.backgroundColor = '';
-                dragged.parentNode.removeChild( dragged );
+                let layer = e.target.layer + 1;
+                dragged.layer = layer;
+                dragged.style.textIndent = 20 * layer + 'px';
+                dragged.remove();
                 e.target.appendChild( dragged );
+                if(layer > window.layer) {
+                    window.layer = layer;
+                    window.nodeInnerStyle = Element.addInnerStyle(`
+                        .directory-tree .node {
+                            width: ${ 299 + window.layer * 20 }px;
+                        }
+                    `);
+                }
+                let src = dragged.title;
+                let dst = pathModule.join(e.target.title, dragged.name);
+                let kind = dragged.tmp.kind === "file" ? "file" : "folder";
+                if(src === dst) {
+                    dst = dst + (new Date());
+                }
+                ipcRenderer.send("move" + kind + "-message", src, dst);
             }
         };
     }
+    /**
+     * @method createTmp
+     * @for Directory
+     * @description 创建目录结点模板
+     * @param { Number } layer 结点层数
+     * @param { json } curNode 当前结点
+     * @param { nodes } 目录模板
+     * @return { json }
+     */
     createTmp(layer, curNode, nodes) {
         let name = curNode.name;
         let url = curNode.url;
@@ -1209,6 +1572,7 @@ class Directory {
                 name, 
                 tmp: curNode,
                 layer,
+                draggable: true
             },
             children: [
                 {
@@ -1253,7 +1617,7 @@ class Directory {
                     tmp.children.push(item);
                 });
             }
-            tmp.attrs.draggable =  true 
+            // tmp.attrs.draggable =  true 
             tmp.events.dragover = this.dragoverHandler.bind(this);
             tmp.events.dragenter = this.dragenterHandler.bind(this);
             tmp.events.dragleave = this.dragleaveHandler.bind(this);
@@ -1267,6 +1631,13 @@ class Directory {
         }
         return tmp;
     }
+    /**
+     * @method getUnSelectedChildNodes
+     * @for Directory
+     * @description 获取未选中孩子结点
+     * @param { HTMLElement } parent 父结点
+     * @return { HTMLElement }
+     */
     getUnSelectedChildNodes(parent){
         let children = parent.children;
         let unSelectedChildNodes = [];
@@ -1280,6 +1651,15 @@ class Directory {
         }
         return unSelectedChildNodes;
     }
+    /**
+     * @method selectNode
+     * @for Directory
+     * @description 结点选中事件监听
+     * @param { HTMLElement } root 根结点
+     * @param { HTMLElement } parent 父结点
+     * @param { HTMLElement } el 当前结点
+     * @return { function }
+     */
     selectNode(root, parent, el) {    
         return () => {
             if(el.checked){
@@ -1306,7 +1686,11 @@ class Directory {
         };
     }
 }
-// 右键菜单类
+/**
+ * @class ContextMenu
+ * @description 右键菜单类
+ * @constructor { function(el, menu) => void }
+ */
 class ContextMenu {
     constructor(el, menu) {
         let root = {
@@ -1318,6 +1702,13 @@ class ContextMenu {
         this.el = el;
         this.menu = (new Element()).createElement(menu, root);
     }
+    /**
+     * @method initEvent
+     * @for ContextMenu
+     * @description 初始化监听事件
+     * @param { function } callback1 右键菜单事件回调
+     * @param { function } callback2 菜单项点击回调
+     */
     initEvent(callback1, callback2) {
         let el = this.el;
         el.addEventListener("contextmenu", (e) => {
@@ -1340,20 +1731,28 @@ class ContextMenu {
             this.remove();
         }, false);
     }
+    /**
+     * @method remove
+     * @for ContextMenu
+     * @description 移除右键菜单
+     */
     remove() {
         this.menu.remove();
     }
 }
-// 导出操作类
+/**
+ * @class Export
+ * @description 导出操作类
+ * @constructor { function() => void }
+ */
 class Export {
-    /**
-     *  构造函数，记录页面导出按钮的dom
-     */
     constructor() {
         this.el = document.querySelector('.files-export');
     }
     /**
-     *  初始化事件
+     * @method initEvent
+     * @for Export
+     * @description 初始化事件
      */
     initEvent() {
         let el = this.el;
@@ -1369,8 +1768,10 @@ class Export {
         }, false);
     }
     /**
-     *  获取选中文件的模板
-     *  @return { Array } 文件模板
+     * @method getSelectedFilesNodes
+     * @for Export
+     * @description 获取选中文件的模板
+     * @return { Array } 文件模板
      */
     getSelectedFilesNodes() {
         // 获取文件dom树                                                                          
@@ -1385,7 +1786,14 @@ class Export {
         }                   
         return nodes;
     }
-    // 创建文件的模板
+    /**
+     * @method getSelectedNodesTmp
+     * @for Export
+     * @description 创建选中文件的模板
+     * @param { HTMLElement } root 根结点
+     * @param { Array } nodes 模板
+     * @return { Array }
+     */
     getSelectedNodesTmp(root, nodes = []){
         // 获取下一级目录模板
         let children = root.children;
@@ -1422,6 +1830,64 @@ class Export {
         return nodes;
     }
 }
+/**
+ * 
+ */
+class DragBar {
+    constructor($left, $right, $dragBar) {
+        this.$left = $left;
+        this.right = $right;
+        this.$dragBar = $dragBar;
+    }
+    initEvent() {
+        let $left = this.$left;
+        let $right = this.$right;
+        let $dragBar = this.$dragBar;
+        let isMove = false;
+        let startX;
+        let flexBasis = Element.getStyle($left).flexBasis;
+        let originBasis = parseInt(flexBasis);
+        $dragBar.addEventListener("mousedown", function(e) {
+            isMove = true;
+            startX = e.clientX;
+            $dragBar.style.cursor = "e-resize";
+        }, false);
+        $dragBar.addEventListener("mousemove", function(e) {
+            e.preventDefault();
+            if(isMove) {
+                let endX = e.clientX;
+                let distance = endX - startX; 
+                if(distance === 0) return;
+                let nowBasis = originBasis + distance;
+                $left.style.flexBasis = nowBasis + "px";
+                if(window.nodeInnerStyle){
+                    let oneNode = document.querySelector(".node");
+                    let width = oneNode.clientWidth;
+                    let targetWidth = width + distance;
+                    if(targetWidth > 299) {
+                        window.nodeInnerStyle = Element.replaceInnerStyleTag(window.nodeInnerStyle, `
+                            .directory-tree .node {
+                                width: ${ targetWidth }px;
+                            }
+                        `);
+                    }
+                }
+            }
+        }, false);
+        $dragBar.addEventListener("mouseup", function(e) {
+            isMove = false;
+            $dragBar.style.cursor = "pointer";
+            let flexBasis = Element.getStyle($left).flexBasis;
+            originBasis = parseInt(flexBasis);
+        }, false);
+        $dragBar.addEventListener("mouseout", function() {
+            isMove = false;
+            $dragBar.style.cursor = "pointer";
+            let flexBasis = Element.getStyle($left).flexBasis;
+            originBasis = parseInt(flexBasis);
+        }, false);
+    }
+}
 // 页面载入后执行
 window.addEventListener("load", () => {
     // 初始化页面所有面板
@@ -1438,6 +1904,12 @@ window.addEventListener("load", () => {
     const output = new Export();
     // 初始化导出事件
     output.initEvent();
+    // 初始化dragBar
+    let $left = document.querySelector(".container-left");
+    let $right = document.querySelector(".container-right");
+    let $dragBar = document.querySelector(".drag-bar");
+    let dragBar = new DragBar($left, $right, $dragBar);
+    dragBar.initEvent();
     // 初始化系统事件
     Sys.initEvent();
 });
