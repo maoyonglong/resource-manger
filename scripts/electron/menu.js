@@ -1,5 +1,5 @@
 const { Menu } = require("electron");
-const { openDirectory, openFile } = require("./functions");
+const { openDirectory, openFile, resetWindow, openShortCutFile } = require("./functions");
 const tmp = [
     {
         "label": "文件",
@@ -11,6 +11,24 @@ const tmp = [
             {
                 "label": "打开文件",
                 "click": openFile
+            }
+        ]
+    },
+    {
+        "label": "设置",
+        "submenu": [
+            {
+                "label": "快捷键设置",
+                "click": openShortCutFile
+            }
+        ]
+    },
+    {
+        "label": "窗口",
+        "submenu": [
+            {
+                "label": "重置窗口",
+                "click": resetWindow
             }
         ]
     }

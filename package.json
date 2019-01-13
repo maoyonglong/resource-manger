@@ -1,10 +1,11 @@
 {
-  "name": "resources-manager",
+  "name": "files-packager",
   "version": "1.0.0",
   "description": "This is a tool for arranging the docs.",
   "main": "./scripts/electron/index.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-packager . files-packager --win --out ./files-packager --arch=x64 --app-version=1.0.0 --electron-version=3.0.12"
   },
   "repository": {
     "type": "git",
@@ -19,5 +20,7 @@
   "devDependencies": {
     "electron": "^3.0.12"
   },
-  "dependencies": {}
+  "dependencies": {
+    "electron-packager": "^13.0.1"
+  }
 }

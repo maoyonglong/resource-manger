@@ -5,7 +5,7 @@
 }
 .container-left{
     flex: 0 0 300px;
-    border-right: 1px solid #999;
+    /* border-right: 1px solid #999; */
     overflow: hidden;
 }
 .container-right {
@@ -82,28 +82,21 @@
 .directory-tree-wrap .directory-panel .panel-content{
     height: calc(100% - 44px);
     overflow-x: hidden; 
-    overflow-y: scroll;
+    overflow-y: auto;
 }
-.directory-panel .panel-content::-webkit-scrollbar {
-    display: none;
-}
-
 .container-right .tab {
     height: calc(100% - 44px);
 }
-
 .container-right .tab .tab-content,
 .container-right .tab .tab-content-item {
     height: 100%;
 }
-
 .tab-content .files-export {
     background: #F0F8FF url(../images/export.png) no-repeat;
     background-position: center center;
     cursor: pointer;
     background-size: 268px 228px;
 }
-
 .newfile-input-wrap, .newfile-select-wrap{
     font-size: 14px;
     padding-top: 10px;
@@ -119,7 +112,6 @@
     padding-left: 10px;
     padding-right: 10px;
 }
-
 /* btn-group */
 .btn-group .btn{
     border-radius: 4px;
@@ -165,7 +157,6 @@
 .btn-group .btn-blue:active{
     background: #269CE9;
 }
-
 /* default-bar */
 .default-bar{
     background-color: black;
@@ -178,7 +169,6 @@
     color: #fff;
     line-height: 14px;
 }
-
 /* panel */
 .panel .panel-bar{
     padding: 15px 10px;
@@ -217,10 +207,7 @@
 .panel .panel-content{
     transition: all 300ms;
     overflow: hidden;
-    overflow-y: auto;
 }
-
-
 /* tab */
 .tab .tab-bar{
     background-color: #ccc;
@@ -250,7 +237,6 @@
 .tab-content .tab-content-item.active{
     display: block;
 }
-
 /* popup */
 .popup-wrap{
     width: 100%;
@@ -305,10 +291,9 @@
         border-width: 2px;
     }
 }
-
 /* directory-tree */
 .directory-tree {
-    overflow-x: scroll; 
+    overflow-x: auto; 
 }
 .directory-tree .node{
     background-color: #ccc;
@@ -358,16 +343,17 @@
     display: none;
 }
 .directory-tree .drop-btn{
-    float: right;
+    display: inline-block;
+    vertical-align: middle;
     font-size: 12px;
     cursor: pointer;
-    padding-right: 20px;
+    text-indent: 0;
+    padding-left: 6px;
 }
 .directory-tree .node.selected{
     background-color: #90EE90;
     color: #fff;
 }
-
 /* context-menu */
 .context-menu {
     position: absolute;

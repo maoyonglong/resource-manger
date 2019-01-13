@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { initMenu } = require("./menu");
-const { loadShortCutsConfig } = require("./shortcut");
+const { loadShortCutsConfig, watchShortCutConfig } = require("./shortcut");
 const { 
   openDirectoryDialog, 
   openFileDialog,
@@ -104,6 +104,8 @@ app.on('ready', () => {
   initMenu();
   // init the shortcut
   loadShortCutsConfig();
+  // watch shortcut config file
+  watchShortCutConfig();
 });
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

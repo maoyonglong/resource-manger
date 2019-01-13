@@ -229,6 +229,13 @@ let Sys = {
                 directory.init(nodes);
             });
         });
+        // 添加重置窗口事件
+        ipcRenderer.on("resetWindow-message", (event) => {
+            let panels = document.querySelectorAll(".panel");
+            panels.forEach((val) => {
+                val.style.display = "block";
+            });
+        });
     }
 };
 /**
@@ -989,7 +996,8 @@ class Directory {
         };
         window.layer = 0;
         nodes = this.createNodes(nodes, 1);
-        let nodeWidth = 299 + window.layer * 20
+        console.log(window.layer, window.layer*20)
+        let nodeWidth = 299 + window.layer * 20;
         window.nodeInnerStyle = Element.addInnerStyle(`
             .directory-tree .node {
                 width: ${ nodeWidth }px;
@@ -1600,7 +1608,7 @@ class Directory {
         };
         if(nodeKind === 'folder'){
             // push drop btn
-            tmp.children.push({
+            tmp.children.splice(1, 0, {
                 classNames: [
                     "drop-btn", 
                     "drop-up", 
@@ -1859,15 +1867,19 @@ class DragBar {
                 let distance = endX - startX; 
                 if(distance === 0) return;
                 let nowBasis = originBasis + distance;
-                $left.style.flexBasis = nowBasis + "px";
+                if(nowBasis >= 299){
+                    $left.style.flexBasis = nowBasis + "px";
+                }    
                 if(window.nodeInnerStyle){
-                    let oneNode = document.querySelector(".node");
-                    let width = oneNode.clientWidth;
-                    let targetWidth = width + distance;
-                    if(targetWidth > 299) {
+                    // let oneNode = document.querySelector(".node");
+                    // let width = Element.getStyle(oneNode).width;
+                    // width = parseInt(width);
+                    // let targetWidth = width + distance;
+                    // console.log(width, distance, targetWidth);
+                    if(nowBasis >= 299) {
                         window.nodeInnerStyle = Element.replaceInnerStyleTag(window.nodeInnerStyle, `
                             .directory-tree .node {
-                                width: ${ targetWidth }px;
+                                width: ${ nowBasis }px;
                             }
                         `);
                     }

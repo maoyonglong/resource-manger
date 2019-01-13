@@ -1,0 +1,6 @@
+{
+    "Ctrl+O": "openFile", 
+    "Alt+O": "openDirectory",
+    "Alt+R": "resetWindow",
+    "Alt+S+C": "openShortCutFile"
+}
